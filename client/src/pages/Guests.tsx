@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGuestStore } from '../store/guestStore';
-import { FaPlus, FaTrash, FaEdit, FaUserTie, FaUserSecret } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaUserTie, FaFemale } from 'react-icons/fa';
 import type { Guest } from '../types';
 
 const Guests = () => {
@@ -108,7 +108,7 @@ const Guests = () => {
 
         <div className="card bg-pink-50">
           <div className="flex items-center gap-3">
-            <FaUserSecret className="text-3xl text-pink-500" />
+            <FaFemale className="text-3xl text-pink-500" />
             <div>
               <h3 className="text-sm text-gray-600">신부측</h3>
               <p className="text-2xl font-bold text-pink-600">{brideGuests.length}명</p>

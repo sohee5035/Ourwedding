@@ -123,32 +123,6 @@ const VenueForm = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">위도</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  className="input-field"
-                  value={formData.lat}
-                  onChange={(e) => setFormData({ ...formData, lat: Number(e.target.value) })}
-                  placeholder="37.5665"
-                />
-              </div>
-
-              <div>
-                <label className="label">경도</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  className="input-field"
-                  value={formData.lng}
-                  onChange={(e) => setFormData({ ...formData, lng: Number(e.target.value) })}
-                  placeholder="126.978"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="label">최인근 전철역</label>
               <input

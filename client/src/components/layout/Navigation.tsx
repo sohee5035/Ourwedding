@@ -21,15 +21,17 @@ const Navigation = () => {
   ];
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
+    <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <FaHeart className="text-blush-400 text-2xl" />
-            <span className="text-xl font-bold text-blush-400">Our Wedding</span>
+        <div className="flex items-center justify-between h-20">
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="bg-blush-100 p-2 rounded-full group-hover:bg-blush-200 transition-colors">
+              <FaHeart className="text-blush-400 text-xl" />
+            </div>
+            <span className="text-2xl font-serif font-bold text-gray-800 tracking-tight">Our Wedding</span>
           </Link>
 
-          <div className="hidden md:flex space-x-1">
+          <div className="hidden md:flex space-x-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -38,14 +40,14 @@ const Navigation = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
                     isActive
-                      ? 'bg-blush-100 text-blush-600'
-                      : 'text-gray-600 hover:bg-blush-50 hover:text-blush-500'
+                      ? 'bg-blush-50 text-blush-600 font-semibold shadow-sm ring-1 ring-blush-100'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-blush-500'
                   }`}
                 >
-                  <Icon className="text-lg" />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon className={`text-lg ${isActive ? 'text-blush-500' : 'text-gray-400'}`} />
+                  <span className="text-sm">{item.label}</span>
                 </Link>
               );
             })}
