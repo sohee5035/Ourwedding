@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGuestStore } from '../store/guestStore';
 import { FaPlus, FaTrash, FaEdit, FaUserTie, FaFemale } from 'react-icons/fa';
 import type { Guest } from '../types';
 
 const Guests = () => {
-  const { guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount } =
+  const { guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount, fetchGuests } =
     useGuestStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchGuests();
+  }, [fetchGuests]);
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
   const [formData, setFormData] = useState<Omit<Guest, 'id' | 'createdAt'>>({

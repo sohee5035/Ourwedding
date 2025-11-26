@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBudgetStore } from '../store/budgetStore';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 
 const Budget = () => {
-  const { items, addItem, updateItem, deleteItem, getTotalBudget, getTotalActual } =
+  const { items, addItem, updateItem, deleteItem, getTotalBudget, getTotalActual, fetchItems } =
     useBudgetStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
   const [formData, setFormData] = useState({
     category: '',
     budgetAmount: 0,

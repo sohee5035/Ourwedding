@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useVenueStore } from '../store/venueStore';
 import { Link } from 'react-router-dom';
 import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash } from 'react-icons/fa';
 
 const Venues = () => {
-  const { venues, deleteVenue } = useVenueStore();
+  const { venues, deleteVenue, fetchVenues } = useVenueStore();
   const [sortBy, setSortBy] = useState<'name' | 'estimate' | 'recent'>('recent');
+
+  useEffect(() => {
+    fetchVenues();
+  }, [fetchVenues]);
 
   const sortedVenues = [...venues].sort((a, b) => {
     switch (sortBy) {

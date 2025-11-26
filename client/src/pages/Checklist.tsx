@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 
 const Checklist = () => {
-  const { items, addItem, updateItem, deleteItem, toggleComplete } = useChecklistStore();
+  const { items, addItem, updateItem, deleteItem, toggleComplete, fetchItems } = useChecklistStore();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',

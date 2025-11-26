@@ -4,13 +4,17 @@ import { useChecklistStore } from '../store/checklistStore';
 import { useBudgetStore } from '../store/budgetStore';
 import { useGuestStore } from '../store/guestStore';
 import { FaHeart, FaEdit } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
   const venues = useVenueStore((state) => state.venues);
   const checklistItems = useChecklistStore((state) => state.items);
   const guests = useGuestStore((state) => state.guests);
+  const fetchVenues = useVenueStore((state) => state.fetchVenues);
+  const fetchChecklistItems = useChecklistStore((state) => state.fetchItems);
+  const fetchGuests = useGuestStore((state) => state.fetchGuests);
+  const fetchBudgetItems = useBudgetStore((state) => state.fetchItems);
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,14 +24,33 @@ const Home = () => {
     totalBudget: weddingInfo.totalBudget || 0,
   });
 
+  useEffect(() => {
+    // Fetch all data on mount
+    weddingInfo.fetchInfo();
+    fetchVenues();
+    fetchChecklistItems();
+    fetchGuests();
+    fetchBudgetItems();
+  }, []);
+
+  useEffect(() => {
+    // Update form data when wedding info changes
+    setFormData({
+      groomName: weddingInfo.groomName || '',
+      brideName: weddingInfo.brideName || '',
+      weddingDate: weddingInfo.weddingDate || '',
+      totalBudget: weddingInfo.totalBudget || 0,
+    });
+  }, [weddingInfo.groomName, weddingInfo.brideName, weddingInfo.weddingDate, weddingInfo.totalBudget]);
+
   const daysUntil = weddingInfo.getDaysUntilWedding();
   const completedTasks = checklistItems.filter((item) => item.completed).length;
   const totalBudget = useBudgetStore.getState().getTotalBudget();
   const totalActual = useBudgetStore.getState().getTotalActual();
   const attendingGuests = useGuestStore.getState().getAttendingCount();
 
-  const handleSave = () => {
-    weddingInfo.updateInfo(formData);
+  const handleSave = async () => {
+    await weddingInfo.updateInfo(formData);
     setIsEditing(false);
   };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
 import { 
   format, 
@@ -17,9 +17,13 @@ import { ko } from 'date-fns/locale';
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaList } from 'react-icons/fa';
 
 const Calendar = () => {
-  const { items } = useChecklistStore();
+  const { items, fetchItems } = useChecklistStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timetable'>('calendar');
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
