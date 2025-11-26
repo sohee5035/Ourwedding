@@ -22,7 +22,8 @@ export interface ChecklistItem {
   title: string;
   description?: string;
   completed: boolean;
-  dueDate?: string; // D-365, D-180 등
+  dueDate?: string; // D-365, D-180 등 (텍스트 표시용)
+  date?: string; // YYYY-MM-DD (달력 표시용)
   category?: string; // 웨딩홀, 드레스, 스튜디오 등
   createdAt: string;
 }

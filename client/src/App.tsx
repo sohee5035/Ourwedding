@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import Map from './pages/Map';
 import Venues from './pages/Venues';
 import VenueForm from './pages/VenueForm';
-import Checklist from './pages/Checklist';
+import Calendar from './pages/Calendar';
 import Budget from './pages/Budget';
 import Guests from './pages/Guests';
 
@@ -18,6 +18,7 @@ function App() {
           <Route path="venues" element={<Venues />} />
           <Route path="venues/add" element={<VenueForm />} />
           <Route path="venues/edit/:id" element={<VenueForm />} />
+          <Route path="calendar" element={<Calendar />} />
           <Route path="checklist" element={<Checklist />} />
           <Route path="budget" element={<Budget />} />
           <Route path="guests" element={<Guests />} />

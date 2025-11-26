@@ -19,7 +19,7 @@ export const useBudgetStore = create<BudgetStore>()(
       addItem: (item) => {
         const newItem: BudgetItem = {
           ...item,
-          id: crypto.randomUUID(),
+          id: Math.random().toString(36).substring(2, 9), // Simple ID generator
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -51,7 +51,7 @@ export const useBudgetStore = create<BudgetStore>()(
       },
     }),
     {
-      name: 'wedding-budget',
+      name: 'wedding-budget-storage', // Changed storage name to reset potential bad state
     }
   )
 );

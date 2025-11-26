@@ -5,7 +5,8 @@ import {
   FaCheckSquare,
   FaMoneyBillWave,
   FaUsers,
-  FaHeart
+  FaHeart,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const Navigation = () => {
@@ -13,6 +14,7 @@ const Navigation = () => {
 
   const navItems = [
     { path: '/', icon: FaHeart, label: '홈' },
+    { path: '/calendar', icon: FaCalendarAlt, label: '달력/일정' },
     { path: '/map', icon: FaMapMarkedAlt, label: '지도' },
     { path: '/venues', icon: FaListUl, label: '웨딩홀' },
     { path: '/checklist', icon: FaCheckSquare, label: '체크리스트' },

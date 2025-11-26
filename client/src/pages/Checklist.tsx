@@ -11,6 +11,7 @@ const Checklist = () => {
     description: '',
     category: '',
     dueDate: '',
+    date: '',
   });
 
   const handleAdd = () => {
@@ -21,10 +22,11 @@ const Checklist = () => {
       description: formData.description,
       category: formData.category,
       dueDate: formData.dueDate,
+      date: formData.date,
       completed: false,
     });
 
-    setFormData({ title: '', description: '', category: '', dueDate: '' });
+    setFormData({ title: '', description: '', category: '', dueDate: '', date: '' });
     setShowAddForm(false);
   };
 
@@ -36,6 +38,7 @@ const Checklist = () => {
         description: item.description || '',
         category: item.category || '',
         dueDate: item.dueDate || '',
+        date: item.date || '',
       });
       setEditingId(id);
       setShowAddForm(true);
@@ -50,15 +53,16 @@ const Checklist = () => {
       description: formData.description,
       category: formData.category,
       dueDate: formData.dueDate,
+      date: formData.date,
     });
 
-    setFormData({ title: '', description: '', category: '', dueDate: '' });
+    setFormData({ title: '', description: '', category: '', dueDate: '', date: '' });
     setEditingId(null);
     setShowAddForm(false);
   };
 
   const handleCancel = () => {
-    setFormData({ title: '', description: '', category: '', dueDate: '' });
+    setFormData({ title: '', description: '', category: '', dueDate: '', date: '' });
     setEditingId(null);
     setShowAddForm(false);
   };
@@ -125,13 +129,23 @@ const Checklist = () => {
               </div>
 
               <div>
-                <label className="label">기한</label>
+                <label className="label">기한 (D-Day)</label>
                 <input
                   type="text"
                   className="input-field"
                   value={formData.dueDate}
                   onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  placeholder="예: D-180, D-30"
+                  placeholder="예: D-180"
+                />
+              </div>
+
+              <div>
+                <label className="label">날짜 (캘린더 표시용)</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
             </div>
