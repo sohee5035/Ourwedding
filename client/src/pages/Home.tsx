@@ -40,7 +40,7 @@ const Home = () => {
 
           {!isEditing ? (
             <>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              <h1 className="text-xl font-bold text-gray-800 mb-2">
                 {formData.groomName && formData.brideName
                   ? `${formData.groomName} ❤️ ${formData.brideName}`
                   : '우리의 결혼을 준비해요'}
