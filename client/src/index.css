@@ -1,27 +1,46 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* 웨딩 테마 글로벌 스타일 */
+@theme {
+  --color-ivory: #FFFEF7;
+
+  --color-blush-50: #FFF5F7;
+  --color-blush-100: #FFE4E8;
+  --color-blush-200: #FFC1CC;
+  --color-blush-300: #FF9DB0;
+  --color-blush-400: #FF7A94;
+  --color-blush-500: #FF5678;
+  --color-blush-600: #E63E5C;
+  --color-blush-700: #CC2640;
+
+  --color-gold-50: #FFFEF7;
+  --color-gold-100: #F9F5E3;
+  --color-gold-200: #F0E68C;
+  --color-gold-300: #E8D56A;
+  --color-gold-400: #D4AF37;
+  --color-gold-500: #C5A028;
+  --color-gold-600: #B8921A;
+
+  --color-lavender-50: #F9F7FF;
+  --color-lavender-100: #E6E6FA;
+  --color-lavender-200: #D4D4F5;
+  --color-lavender-300: #C2C2F0;
+
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
 @layer base {
   body {
-    @apply bg-ivory text-gray-800;
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  * {
-    @apply antialiased;
+    @apply bg-ivory text-gray-800 font-sans antialiased;
   }
 }
 
-/* 커스텀 컴포넌트 */
 @layer components {
   .btn-primary {
-    @apply bg-blush-300 hover:bg-blush-400 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200 shadow-sm;
+    @apply bg-blush-300 hover:bg-blush-400 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200 shadow-sm cursor-pointer;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-blush-400 font-medium px-6 py-3 rounded-lg border border-blush-200 transition-colors duration-200;
+    @apply bg-white hover:bg-gray-50 text-blush-400 font-medium px-6 py-3 rounded-lg border border-blush-200 transition-colors duration-200 cursor-pointer;
   }
 
   .card {
@@ -37,7 +56,7 @@
   }
 }
 
-/* 스크롤바 커스터마이징 */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
