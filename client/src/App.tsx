@@ -5,6 +5,7 @@ import Map from './pages/Map';
 import Venues from './pages/Venues';
 import VenueForm from './pages/VenueForm';
 import Calendar from './pages/Calendar';
+import Checklist from './pages/Checklist';
 import Budget from './pages/Budget';
 import Guests from './pages/Guests';
 

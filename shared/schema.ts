@@ -1,18 +1,110 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const weddingInfo = pgTable("wedding_info", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  weddingDate: text("wedding_date"),
+  groomName: text("groom_name"),
+  brideName: text("bride_name"),
+  totalBudget: integer("total_budget").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const venues = pgTable("venues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  lat: real("lat").notNull().default(37.5665),
+  lng: real("lng").notNull().default(126.978),
+  estimate: integer("estimate").default(0),
+  minGuests: integer("min_guests").default(0),
+  mealCost: integer("meal_cost").default(0),
+  rentalFee: integer("rental_fee").default(0),
+  nearestStation: text("nearest_station").default(''),
+  memo: text("memo").default(''),
+  photos: text("photos").array().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const checklistItems = pgTable("checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  completed: boolean("completed").default(false),
+  dueDate: text("due_date"),
+  date: text("date"),
+  category: text("category"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const budgetItems = pgTable("budget_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(),
+  budgetAmount: integer("budget_amount").default(0),
+  actualAmount: integer("actual_amount").default(0),
+  memo: text("memo"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const guests = pgTable("guests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  phone: text("phone").default(''),
+  side: text("side").notNull(),
+  relation: text("relation"),
+  invitationSent: boolean("invitation_sent").default(false),
+  attendance: text("attendance").default('pending'),
+  tableNumber: integer("table_number"),
+  memo: text("memo"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert Schemas
+export const insertWeddingInfoSchema = createInsertSchema(weddingInfo).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVenueSchema = createInsertSchema(venues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChecklistItemSchema = createInsertSchema(checklistItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBudgetItemSchema = createInsertSchema(budgetItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertGuestSchema = createInsertSchema(guests).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types
+export type InsertWeddingInfo = z.infer<typeof insertWeddingInfoSchema>;
+export type WeddingInfo = typeof weddingInfo.$inferSelect;
+
+export type InsertVenue = z.infer<typeof insertVenueSchema>;
+export type Venue = typeof venues.$inferSelect;
+
+export type InsertChecklistItem = z.infer<typeof insertChecklistItemSchema>;
+export type ChecklistItem = typeof checklistItems.$inferSelect;
+
+export type InsertBudgetItem = z.infer<typeof insertBudgetItemSchema>;
+export type BudgetItem = typeof budgetItems.$inferSelect;
+
+export type InsertGuest = z.infer<typeof insertGuestSchema>;
+export type Guest = typeof guests.$inferSelect;

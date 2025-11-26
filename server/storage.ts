@@ -1,38 +1,167 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { 
+  type WeddingInfo, type InsertWeddingInfo,
+  type Venue, type InsertVenue,
+  type ChecklistItem, type InsertChecklistItem,
+  type BudgetItem, type InsertBudgetItem,
+  type Guest, type InsertGuest,
+  weddingInfo, venues, checklistItems, budgetItems, guests
+} from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Wedding Info
+  getWeddingInfo(): Promise<WeddingInfo | undefined>;
+  updateWeddingInfo(info: Partial<InsertWeddingInfo>): Promise<WeddingInfo>;
+
+  // Venues
+  getVenues(): Promise<Venue[]>;
+  getVenue(id: string): Promise<Venue | undefined>;
+  createVenue(venue: InsertVenue): Promise<Venue>;
+  updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue>;
+  deleteVenue(id: string): Promise<void>;
+
+  // Checklist
+  getChecklistItems(): Promise<ChecklistItem[]>;
+  createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem>;
+  updateChecklistItem(id: string, item: Partial<InsertChecklistItem>): Promise<ChecklistItem>;
+  deleteChecklistItem(id: string): Promise<void>;
+
+  // Budget
+  getBudgetItems(): Promise<BudgetItem[]>;
+  createBudgetItem(item: InsertBudgetItem): Promise<BudgetItem>;
+  updateBudgetItem(id: string, item: Partial<InsertBudgetItem>): Promise<BudgetItem>;
+  deleteBudgetItem(id: string): Promise<void>;
+
+  // Guests
+  getGuests(): Promise<Guest[]>;
+  createGuest(guest: InsertGuest): Promise<Guest>;
+  updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest>;
+  deleteGuest(id: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Wedding Info
+  async getWeddingInfo(): Promise<WeddingInfo | undefined> {
+    const [info] = await db.select().from(weddingInfo).limit(1);
+    return info || undefined;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async updateWeddingInfo(info: Partial<InsertWeddingInfo>): Promise<WeddingInfo> {
+    const existing = await this.getWeddingInfo();
+    
+    if (existing) {
+      const [updated] = await db
+        .update(weddingInfo)
+        .set({ ...info, updatedAt: new Date() })
+        .where(eq(weddingInfo.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(weddingInfo)
+        .values(info)
+        .returning();
+      return created;
+    }
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  // Venues
+  async getVenues(): Promise<Venue[]> {
+    return await db.select().from(venues).orderBy(venues.createdAt);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getVenue(id: string): Promise<Venue | undefined> {
+    const [venue] = await db.select().from(venues).where(eq(venues.id, id));
+    return venue || undefined;
+  }
+
+  async createVenue(venue: InsertVenue): Promise<Venue> {
+    const [created] = await db.insert(venues).values(venue).returning();
+    return created;
+  }
+
+  async updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue> {
+    const [updated] = await db
+      .update(venues)
+      .set({ ...venue, updatedAt: new Date() })
+      .where(eq(venues.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteVenue(id: string): Promise<void> {
+    await db.delete(venues).where(eq(venues.id, id));
+  }
+
+  // Checklist
+  async getChecklistItems(): Promise<ChecklistItem[]> {
+    return await db.select().from(checklistItems).orderBy(checklistItems.createdAt);
+  }
+
+  async createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem> {
+    const [created] = await db.insert(checklistItems).values(item).returning();
+    return created;
+  }
+
+  async updateChecklistItem(id: string, item: Partial<InsertChecklistItem>): Promise<ChecklistItem> {
+    const [updated] = await db
+      .update(checklistItems)
+      .set(item)
+      .where(eq(checklistItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteChecklistItem(id: string): Promise<void> {
+    await db.delete(checklistItems).where(eq(checklistItems.id, id));
+  }
+
+  // Budget
+  async getBudgetItems(): Promise<BudgetItem[]> {
+    return await db.select().from(budgetItems).orderBy(budgetItems.createdAt);
+  }
+
+  async createBudgetItem(item: InsertBudgetItem): Promise<BudgetItem> {
+    const [created] = await db.insert(budgetItems).values(item).returning();
+    return created;
+  }
+
+  async updateBudgetItem(id: string, item: Partial<InsertBudgetItem>): Promise<BudgetItem> {
+    const [updated] = await db
+      .update(budgetItems)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(budgetItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBudgetItem(id: string): Promise<void> {
+    await db.delete(budgetItems).where(eq(budgetItems.id, id));
+  }
+
+  // Guests
+  async getGuests(): Promise<Guest[]> {
+    return await db.select().from(guests).orderBy(guests.createdAt);
+  }
+
+  async createGuest(guest: InsertGuest): Promise<Guest> {
+    const [created] = await db.insert(guests).values(guest).returning();
+    return created;
+  }
+
+  async updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest> {
+    const [updated] = await db
+      .update(guests)
+      .set(guest)
+      .where(eq(guests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGuest(id: string): Promise<void> {
+    await db.delete(guests).where(eq(guests.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
