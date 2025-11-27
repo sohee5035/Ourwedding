@@ -47,9 +47,11 @@ const VenueForm = () => {
     try {
       if (isEdit && id) {
         await updateVenue(id, formData);
+        await fetchVenues();
         navigate('/venues');
       } else {
         const newVenue = await addVenue(formData);
+        await fetchVenues();
         navigate(`/venues/${newVenue.id}/quotes/add`);
       }
     } catch (error) {

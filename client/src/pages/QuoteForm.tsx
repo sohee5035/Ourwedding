@@ -61,6 +61,7 @@ const QuoteForm = () => {
       } else {
         await addVenueQuote(formData);
       }
+      await Promise.all([fetchVenues(), fetchVenueQuotes()]);
       navigate('/venues');
     } catch (error) {
       console.error('Failed to save quote:', error);

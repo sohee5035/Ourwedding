@@ -135,12 +135,9 @@ const Venues = () => {
                     <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                       견적 {venue.quotes.length}개
                     </span>
-                    <button
-                      className="p-2 text-gray-400 hover:text-gray-600"
-                      data-testid={`toggle-venue-${venue.id}`}
-                    >
+                    <span className="p-2 text-gray-400">
                       {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                    </button>
+                    </span>
                   </div>
                 </div>
 
@@ -148,7 +145,7 @@ const Venues = () => {
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-medium text-gray-600">견적 목록</h4>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <Link
                           to={`/venues/${venue.id}/quotes/add`}
                           className="text-sm text-blush-500 hover:text-blush-600 flex items-center gap-1"
@@ -164,10 +161,7 @@ const Venues = () => {
                           <FaEdit className="text-xs" /> 웨딩홀 정보 수정
                         </Link>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteVenue(venue.id, venue.name);
-                          }}
+                          onClick={() => handleDeleteVenue(venue.id, venue.name)}
                           className="text-sm text-red-400 hover:text-red-500 flex items-center gap-1"
                           data-testid={`delete-venue-${venue.id}`}
                         >
