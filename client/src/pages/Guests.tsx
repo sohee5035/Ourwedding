@@ -598,20 +598,20 @@ const Guests = () => {
                   </p>
                 </div>
 
-                <div className="flex gap-1">
+                <div className="flex gap-1 shrink-0">
                   <button
                     onClick={() => handleEdit(guest.id)}
-                    className="text-gray-400 hover:text-blue-500 p-2"
+                    className="w-10 h-10 flex items-center justify-center text-blue-500 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"
                     data-testid={`button-edit-${guest.id}`}
                   >
-                    <FaEdit />
+                    <FaEdit className="text-lg" />
                   </button>
                   <button
                     onClick={() => deleteGuest(guest.id)}
-                    className="text-gray-400 hover:text-red-500 p-2"
+                    className="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors"
                     data-testid={`button-delete-${guest.id}`}
                   >
-                    <FaTrash />
+                    <FaTrash className="text-lg" />
                   </button>
                 </div>
               </div>
