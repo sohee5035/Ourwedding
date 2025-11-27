@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useGuestStore } from '../store/guestStore';
-import { FaPlus, FaTrash, FaEdit, FaUserTie, FaFemale } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable } from 'react-icons/fa';
 import type { Guest } from '../types';
+
+interface BulkGuestRow {
+  name: string;
+  phone: string;
+  relation: string;
+}
 
 const Guests = () => {
   const { guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount, fetchGuests } =
     useGuestStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showBulkForm, setShowBulkForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGuests();
   }, [fetchGuests]);
+
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
   const [formData, setFormData] = useState<Omit<Guest, 'id' | 'createdAt'>>({
@@ -25,6 +33,15 @@ const Guests = () => {
     tableNumber: undefined,
     memo: '',
   });
+
+  const [bulkSide, setBulkSide] = useState<'groom' | 'bride'>('groom');
+  const [bulkRows, setBulkRows] = useState<BulkGuestRow[]>([
+    { name: '', phone: '', relation: '' },
+    { name: '', phone: '', relation: '' },
+    { name: '', phone: '', relation: '' },
+    { name: '', phone: '', relation: '' },
+    { name: '', phone: '', relation: '' },
+  ]);
 
   const handleAdd = () => {
     if (!formData.name.trim()) return;
@@ -48,6 +65,7 @@ const Guests = () => {
       });
       setEditingId(id);
       setShowAddForm(true);
+      setShowBulkForm(false);
     }
   };
 
@@ -73,6 +91,49 @@ const Guests = () => {
     setShowAddForm(false);
   };
 
+  const updateBulkRow = (index: number, field: keyof BulkGuestRow, value: string) => {
+    const newRows = [...bulkRows];
+    newRows[index] = { ...newRows[index], [field]: value };
+    setBulkRows(newRows);
+  };
+
+  const addBulkRow = () => {
+    setBulkRows([...bulkRows, { name: '', phone: '', relation: '' }]);
+  };
+
+  const removeBulkRow = (index: number) => {
+    if (bulkRows.length > 1) {
+      setBulkRows(bulkRows.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleBulkSave = async () => {
+    const validRows = bulkRows.filter(row => row.name.trim());
+    if (validRows.length === 0) return;
+
+    for (const row of validRows) {
+      await addGuest({
+        name: row.name.trim(),
+        phone: row.phone.trim(),
+        side: bulkSide,
+        relation: row.relation.trim(),
+        invitationSent: false,
+        attendance: 'pending',
+        tableNumber: undefined,
+        memo: '',
+      });
+    }
+
+    setBulkRows([
+      { name: '', phone: '', relation: '' },
+      { name: '', phone: '', relation: '' },
+      { name: '', phone: '', relation: '' },
+      { name: '', phone: '', relation: '' },
+      { name: '', phone: '', relation: '' },
+    ]);
+    setShowBulkForm(false);
+  };
+
   const groomGuests = getGuestsBySide('groom');
   const brideGuests = getGuestsBySide('bride');
   const attendingCount = getAttendingCount();
@@ -87,53 +148,203 @@ const Guests = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">하객 관리</h1>
-          <p className="text-gray-600 mt-2">총 {guests.length}명 (참석: {attendingCount}명)</p>
+          <h1 className="text-2xl font-bold text-gray-800">하객 관리</h1>
+          <p className="text-gray-600 mt-1">총 {guests.length}명 (참석: {attendingCount}명)</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <FaPlus /> 하객 추가
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setShowBulkForm(true);
+              setShowAddForm(false);
+            }}
+            className="btn-secondary flex items-center gap-2"
+            data-testid="button-bulk-add"
+          >
+            <FaTable /> 대량 추가
+          </button>
+          <button
+            onClick={() => {
+              setShowAddForm(true);
+              setShowBulkForm(false);
+            }}
+            className="btn-primary flex items-center gap-2"
+            data-testid="button-add-guest"
+          >
+            <FaPlus /> 하객 추가
+          </button>
+        </div>
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card bg-blue-50">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card bg-blue-50 !p-4">
           <div className="flex items-center gap-3">
-            <FaUserTie className="text-3xl text-blue-500" />
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <FaHeart className="text-xl text-blue-500" />
+            </div>
             <div>
-              <h3 className="text-sm text-gray-600">신랑측</h3>
-              <p className="text-2xl font-bold text-blue-600">{groomGuests.length}명</p>
+              <h3 className="text-xs text-gray-600">신랑측</h3>
+              <p className="text-xl font-bold text-blue-600">{groomGuests.length}명</p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-pink-50">
+        <div className="card bg-pink-50 !p-4">
           <div className="flex items-center gap-3">
-            <FaFemale className="text-3xl text-pink-500" />
+            <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+              <FaHeart className="text-xl text-pink-500" />
+            </div>
             <div>
-              <h3 className="text-sm text-gray-600">신부측</h3>
-              <p className="text-2xl font-bold text-pink-600">{brideGuests.length}명</p>
+              <h3 className="text-xs text-gray-600">신부측</h3>
+              <p className="text-xl font-bold text-pink-600">{brideGuests.length}명</p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-green-50">
-          <h3 className="text-sm text-gray-600 mb-2">참석</h3>
-          <p className="text-2xl font-bold text-green-600">
+        <div className="card bg-green-50 !p-4">
+          <h3 className="text-xs text-gray-600 mb-1">참석</h3>
+          <p className="text-xl font-bold text-green-600">
             {guests.filter((g) => g.attendance === 'attending').length}명
           </p>
         </div>
 
-        <div className="card bg-yellow-50">
-          <h3 className="text-sm text-gray-600 mb-2">미정</h3>
-          <p className="text-2xl font-bold text-yellow-600">
+        <div className="card bg-yellow-50 !p-4">
+          <h3 className="text-xs text-gray-600 mb-1">미정</h3>
+          <p className="text-xl font-bold text-yellow-600">
             {guests.filter((g) => g.attendance === 'pending').length}명
           </p>
         </div>
       </div>
+
+      {/* 대량 추가 폼 */}
+      {showBulkForm && (
+        <div className="card bg-lavender-50">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-800">대량 하객 추가</h3>
+            <button
+              onClick={() => setShowBulkForm(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* 신랑/신부 선택 */}
+          <div className="mb-4">
+            <label className="label">구분 선택</label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBulkSide('groom')}
+                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                  bulkSide === 'groom'
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+                data-testid="button-bulk-groom"
+              >
+                <FaHeart className={bulkSide === 'groom' ? 'text-white' : 'text-blue-400'} />
+                신랑측
+              </button>
+              <button
+                onClick={() => setBulkSide('bride')}
+                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                  bulkSide === 'bride'
+                    ? 'bg-pink-500 text-white shadow-md'
+                    : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+                data-testid="button-bulk-bride"
+              >
+                <FaHeart className={bulkSide === 'bride' ? 'text-white' : 'text-pink-400'} />
+                신부측
+              </button>
+            </div>
+          </div>
+
+          {/* 스프레드시트 스타일 입력 */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 rounded-tl-lg">이름 *</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">연락처</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">관계</th>
+                  <th className="w-10 rounded-tr-lg"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulkRows.map((row, index) => (
+                  <tr key={index} className="border-b border-gray-100">
+                    <td className="py-1 px-1">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blush-200 focus:border-blush-300 text-sm"
+                        value={row.name}
+                        onChange={(e) => updateBulkRow(index, 'name', e.target.value)}
+                        placeholder="이름"
+                        data-testid={`input-bulk-name-${index}`}
+                      />
+                    </td>
+                    <td className="py-1 px-1">
+                      <input
+                        type="tel"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blush-200 focus:border-blush-300 text-sm"
+                        value={row.phone}
+                        onChange={(e) => updateBulkRow(index, 'phone', e.target.value)}
+                        placeholder="010-0000-0000"
+                        data-testid={`input-bulk-phone-${index}`}
+                      />
+                    </td>
+                    <td className="py-1 px-1">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blush-200 focus:border-blush-300 text-sm"
+                        value={row.relation}
+                        onChange={(e) => updateBulkRow(index, 'relation', e.target.value)}
+                        placeholder="친구, 동료 등"
+                        data-testid={`input-bulk-relation-${index}`}
+                      />
+                    </td>
+                    <td className="py-1 px-1">
+                      <button
+                        onClick={() => removeBulkRow(index)}
+                        className="text-gray-400 hover:text-red-500 p-2"
+                        disabled={bulkRows.length === 1}
+                        data-testid={`button-remove-row-${index}`}
+                      >
+                        <FaTrash className="text-sm" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex flex-col md:flex-row gap-3">
+            <button
+              onClick={addBulkRow}
+              className="flex items-center justify-center gap-2 py-2 px-4 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blush-300 hover:text-blush-500 transition-colors"
+              data-testid="button-add-row"
+            >
+              <FaPlus className="text-sm" /> 행 추가
+            </button>
+            <div className="flex-1"></div>
+            <button
+              onClick={() => setShowBulkForm(false)}
+              className="btn-secondary"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleBulkSave}
+              className="btn-primary"
+              data-testid="button-bulk-save"
+            >
+              {bulkRows.filter(r => r.name.trim()).length}명 일괄 저장
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 추가/수정 폼 */}
       {showAddForm && (
@@ -151,6 +362,7 @@ const Guests = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="이름"
+                  data-testid="input-guest-name"
                 />
               </div>
 
@@ -162,6 +374,7 @@ const Guests = () => {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="010-0000-0000"
+                  data-testid="input-guest-phone"
                 />
               </div>
             </div>
@@ -169,16 +382,32 @@ const Guests = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">구분 *</label>
-                <select
-                  className="input-field"
-                  value={formData.side}
-                  onChange={(e) =>
-                    setFormData({ ...formData, side: e.target.value as 'groom' | 'bride' })
-                  }
-                >
-                  <option value="groom">신랑측</option>
-                  <option value="bride">신부측</option>
-                </select>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, side: 'groom' })}
+                    className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      formData.side === 'groom'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white text-gray-600 border border-gray-200'
+                    }`}
+                  >
+                    <FaHeart className={formData.side === 'groom' ? 'text-white' : 'text-blue-400'} />
+                    신랑측
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, side: 'bride' })}
+                    className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      formData.side === 'bride'
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-white text-gray-600 border border-gray-200'
+                    }`}
+                  >
+                    <FaHeart className={formData.side === 'bride' ? 'text-white' : 'text-pink-400'} />
+                    신부측
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -189,6 +418,7 @@ const Guests = () => {
                   value={formData.relation}
                   onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
                   placeholder="예: 친구, 직장동료, 가족"
+                  data-testid="input-guest-relation"
                 />
               </div>
             </div>
@@ -205,6 +435,7 @@ const Guests = () => {
                       attendance: e.target.value as 'pending' | 'attending' | 'declined',
                     })
                   }
+                  data-testid="select-attendance"
                 >
                   <option value="pending">미정</option>
                   <option value="attending">참석</option>
@@ -225,6 +456,7 @@ const Guests = () => {
                     })
                   }
                   placeholder="테이블 번호"
+                  data-testid="input-table-number"
                 />
               </div>
 
@@ -237,6 +469,7 @@ const Guests = () => {
                       setFormData({ ...formData, invitationSent: e.target.checked })
                     }
                     className="w-5 h-5 text-blush-500 rounded focus:ring-blush-400"
+                    data-testid="checkbox-invitation"
                   />
                   <span className="text-sm text-gray-700">청첩장 발송</span>
                 </label>
@@ -251,6 +484,7 @@ const Guests = () => {
                 onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
                 placeholder="메모 (선택사항)"
                 rows={2}
+                data-testid="textarea-memo"
               />
             </div>
 
@@ -258,6 +492,7 @@ const Guests = () => {
               <button
                 onClick={editingId ? handleUpdate : handleAdd}
                 className="btn-primary flex-1"
+                data-testid="button-save-guest"
               >
                 {editingId ? '수정' : '추가'}
               </button>
@@ -270,14 +505,15 @@ const Guests = () => {
       )}
 
       {/* 필터 */}
-      <div className="card">
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="label">구분 필터</label>
+      <div className="card !p-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[120px]">
+            <label className="label text-xs">구분</label>
             <select
-              className="input-field"
+              className="input-field !py-2 text-sm"
               value={filterSide}
               onChange={(e) => setFilterSide(e.target.value as any)}
+              data-testid="filter-side"
             >
               <option value="all">전체</option>
               <option value="groom">신랑측</option>
@@ -285,12 +521,13 @@ const Guests = () => {
             </select>
           </div>
 
-          <div>
-            <label className="label">참석 필터</label>
+          <div className="flex-1 min-w-[120px]">
+            <label className="label text-xs">참석</label>
             <select
-              className="input-field"
+              className="input-field !py-2 text-sm"
               value={filterAttendance}
               onChange={(e) => setFilterAttendance(e.target.value as any)}
+              data-testid="filter-attendance"
             >
               <option value="all">전체</option>
               <option value="attending">참석</option>
@@ -303,101 +540,82 @@ const Guests = () => {
 
       {/* 하객 리스트 */}
       <div className="card">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <h2 className="text-lg font-bold text-gray-800 mb-4">
           하객 목록 ({filteredGuests.length}명)
         </h2>
         {filteredGuests.length === 0 ? (
           <p className="text-gray-500 text-center py-8">조건에 맞는 하객이 없습니다</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">이름</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">연락처</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">구분</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">관계</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">참석</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">테이블</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">청첩장</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredGuests.map((guest) => (
-                  <tr key={guest.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-gray-800">{guest.name}</p>
-                        {guest.memo && (
-                          <p className="text-sm text-gray-500 mt-1">{guest.memo}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{guest.phone}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          guest.side === 'groom'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-pink-100 text-pink-700'
-                        }`}
-                      >
-                        {guest.side === 'groom' ? '신랑' : '신부'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{guest.relation}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          guest.attendance === 'attending'
-                            ? 'bg-green-100 text-green-700'
-                            : guest.attendance === 'declined'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
-                        {guest.attendance === 'attending'
-                          ? '참석'
+          <div className="space-y-2">
+            {filteredGuests.map((guest) => (
+              <div
+                key={guest.id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                data-testid={`guest-row-${guest.id}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  guest.side === 'groom' ? 'bg-blue-100' : 'bg-pink-100'
+                }`}>
+                  <FaHeart className={`text-lg ${
+                    guest.side === 'groom' ? 'text-blue-500' : 'text-pink-500'
+                  }`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-gray-800 truncate">{guest.name}</p>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        guest.attendance === 'attending'
+                          ? 'bg-green-100 text-green-700'
                           : guest.attendance === 'declined'
-                          ? '불참'
-                          : '미정'}
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {guest.attendance === 'attending'
+                        ? '참석'
+                        : guest.attendance === 'declined'
+                        ? '불참'
+                        : '미정'}
+                    </span>
+                    {guest.invitationSent && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">
+                        청첩장
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-gray-600">
-                      {guest.tableNumber || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          guest.invitationSent
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {guest.invitationSent ? '발송' : '미발송'}
+                    )}
+                    {guest.tableNumber && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">
+                        T{guest.tableNumber}
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          onClick={() => handleEdit(guest.id)}
-                          className="text-blue-500 hover:text-blue-600 p-2"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => deleteGuest(guest.id)}
-                          className="text-red-500 hover:text-red-600 p-2"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 truncate">
+                    {guest.relation && `${guest.relation}`}
+                    {guest.relation && guest.phone && ' · '}
+                    {guest.phone}
+                    {guest.memo && ` · ${guest.memo}`}
+                  </p>
+                </div>
+
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleEdit(guest.id)}
+                    className="text-gray-400 hover:text-blue-500 p-2"
+                    data-testid={`button-edit-${guest.id}`}
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    onClick={() => deleteGuest(guest.id)}
+                    className="text-gray-400 hover:text-red-500 p-2"
+                    data-testid={`button-delete-${guest.id}`}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
