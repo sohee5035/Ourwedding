@@ -56,6 +56,52 @@ export async function deleteVenue(id: string) {
   if (!res.ok) throw new Error('Failed to delete venue');
 }
 
+// Venue Quotes
+export async function fetchAllVenueQuotes() {
+  const res = await fetch('/api/venue-quotes');
+  if (!res.ok) throw new Error('Failed to fetch venue quotes');
+  return res.json();
+}
+
+export async function fetchVenueQuotes(venueId: string) {
+  const res = await fetch(`/api/venues/${venueId}/quotes`);
+  if (!res.ok) throw new Error('Failed to fetch venue quotes');
+  return res.json();
+}
+
+export async function fetchVenueQuote(id: string) {
+  const res = await fetch(`/api/venue-quotes/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch venue quote');
+  return res.json();
+}
+
+export async function createVenueQuote(data: any) {
+  const res = await fetch('/api/venue-quotes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create venue quote');
+  return res.json();
+}
+
+export async function updateVenueQuote(id: string, data: any) {
+  const res = await fetch(`/api/venue-quotes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update venue quote');
+  return res.json();
+}
+
+export async function deleteVenueQuote(id: string) {
+  const res = await fetch(`/api/venue-quotes/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete venue quote');
+}
+
 // Checklist
 export async function fetchChecklistItems() {
   const res = await fetch('/api/checklist');

@@ -1,19 +1,34 @@
-// 웨딩홀 정보
+// 웨딩홀 기본 정보
 export interface WeddingVenue {
   id: string;
   name: string;
   address: string;
   lat: number;
   lng: number;
+  nearestStation: string; // 최인근 전철역
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 웨딩홀 견적 (날짜/시간별)
+export interface VenueQuote {
+  id: string;
+  venueId: string;
+  date?: string; // 예식 날짜 (YYYY-MM-DD)
+  time?: string; // 예식 시간 (HH:mm)
   estimate: number; // 견적
   minGuests: number; // 최소보증인원
   mealCost: number; // 식대 (1인당)
   rentalFee: number; // 대관료
-  nearestStation: string; // 최인근 전철역
   memo: string;
   photos: string[]; // Base64 또는 URL
   createdAt: string;
   updatedAt: string;
+}
+
+// 웨딩홀 + 견적 통합 (UI용)
+export interface VenueWithQuotes extends WeddingVenue {
+  quotes: VenueQuote[];
 }
 
 // 준비 체크리스트 아이템

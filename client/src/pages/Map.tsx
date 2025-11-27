@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { useVenueStore } from '../store/venueStore';
-import { FaMapMarkerAlt, FaTimes, FaSubway, FaUsers, FaUtensils, FaBuilding, FaEdit } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaTimes, FaSubway, FaEdit, FaList } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-import type { WeddingVenue } from '../types';
+import type { WeddingVenue, VenueQuote } from '../types';
 import 'leaflet/dist/leaflet.css';
 
 import {
@@ -38,15 +38,17 @@ function MapController({ center, zoom }: { center: [number, number] | null; zoom
 }
 
 const Map = () => {
-  const { venues, fetchVenues } = useVenueStore();
+  const { venues, venueQuotes, fetchVenues, fetchVenueQuotes, getQuotesByVenueId } = useVenueStore();
   const [selectedVenue, setSelectedVenue] = useState<WeddingVenue | null>(null);
+  const [selectedQuotes, setSelectedQuotes] = useState<VenueQuote[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState(8);
 
   useEffect(() => {
     fetchVenues();
-  }, [fetchVenues]);
+    fetchVenueQuotes();
+  }, [fetchVenues, fetchVenueQuotes]);
 
   useEffect(() => {
     if (venues.length > 0 && !mapCenter) {
@@ -57,6 +59,7 @@ const Map = () => {
 
   const handleMarkerClick = (venue: WeddingVenue) => {
     setSelectedVenue(venue);
+    setSelectedQuotes(getQuotesByVenueId(venue.id));
     setMapCenter([venue.lat, venue.lng]);
     setMapZoom(14);
     setIsDrawerOpen(true);
@@ -65,9 +68,19 @@ const Map = () => {
   const handleDrawerClose = () => {
     setIsDrawerOpen(false);
     setSelectedVenue(null);
+    setSelectedQuotes([]);
   };
 
   const defaultCenter: [number, number] = [37.5665, 126.978];
+
+  const getLowestEstimate = (venueId: string): number | null => {
+    if (!venueQuotes || venueQuotes.length === 0) return null;
+    const quotes = venueQuotes.filter(q => q.venueId === venueId);
+    if (quotes.length === 0) return null;
+    const estimates = quotes.map(q => q.estimate ?? 0).filter(e => e > 0);
+    if (estimates.length === 0) return null;
+    return Math.min(...estimates);
+  };
 
   return (
     <div className="relative h-[70vh] md:h-[600px] rounded-xl overflow-hidden">
@@ -95,24 +108,33 @@ const Map = () => {
             />
             <MapController center={mapCenter} zoom={mapZoom} />
             
-            {venues.map((venue) => (
-              <Marker
-                key={venue.id}
-                position={[venue.lat, venue.lng]}
-                icon={customIcon}
-                eventHandlers={{
-                  click: () => handleMarkerClick(venue),
-                }}
-              >
-                <Popup>
-                  <div className="text-center">
-                    <strong>{venue.name}</strong>
-                    <br />
-                    <span className="text-blush-500">{venue.estimate.toLocaleString()}원</span>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+            {venues.map((venue) => {
+              const lowestEstimate = getLowestEstimate(venue.id);
+              return (
+                <Marker
+                  key={venue.id}
+                  position={[venue.lat, venue.lng]}
+                  icon={customIcon}
+                  eventHandlers={{
+                    click: () => handleMarkerClick(venue),
+                  }}
+                >
+                  <Popup>
+                    <div className="text-center">
+                      <strong>{venue.name}</strong>
+                      {lowestEstimate !== null && (
+                        <>
+                          <br />
+                          <span className="text-blush-500">
+                            {lowestEstimate.toLocaleString()}원~
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MapContainer>
 
           <div className="absolute top-4 left-4 right-4 z-[1000]">
@@ -149,7 +171,10 @@ const Map = () => {
 
       <Drawer open={isDrawerOpen} onOpenChange={(open) => {
         setIsDrawerOpen(open);
-        if (!open) setSelectedVenue(null);
+        if (!open) {
+          setSelectedVenue(null);
+          setSelectedQuotes([]);
+        }
       }}>
         <DrawerContent className="max-h-[85vh]">
           {selectedVenue && (
@@ -172,44 +197,6 @@ const Map = () => {
               </DrawerHeader>
 
               <div className="px-4 pb-6 space-y-4">
-                {selectedVenue.photos.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {selectedVenue.photos.map((photo, index) => (
-                      <img
-                        key={index}
-                        src={photo}
-                        alt={`${selectedVenue.name} ${index + 1}`}
-                        className="w-32 h-24 object-cover rounded-lg flex-shrink-0"
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <div className="bg-blush-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-600 mb-1">견적</p>
-                  <p className="text-2xl font-bold text-blush-600">
-                    {selectedVenue.estimate.toLocaleString()}원
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaUsers className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">최소인원</p>
-                    <p className="font-semibold">{selectedVenue.minGuests}명</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaUtensils className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">식대</p>
-                    <p className="font-semibold text-sm">{(selectedVenue.mealCost / 10000).toFixed(0)}만원</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaBuilding className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">대관료</p>
-                    <p className="font-semibold text-sm">{(selectedVenue.rentalFee / 10000).toFixed(0)}만원</p>
-                  </div>
-                </div>
-
                 {selectedVenue.nearestStation && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <FaSubway className="text-blue-500" />
@@ -217,25 +204,63 @@ const Map = () => {
                   </div>
                 )}
 
-                {selectedVenue.memo && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-sm text-gray-500 mb-1">메모</p>
-                    <p className="text-gray-700">{selectedVenue.memo}</p>
+                {selectedQuotes.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-600">
+                      등록된 견적 {selectedQuotes.length}개
+                    </p>
+                    {selectedQuotes.map((quote) => (
+                      <div 
+                        key={quote.id} 
+                        className="bg-gradient-to-br from-ivory-50 to-blush-50 rounded-xl p-4 border border-blush-100"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="text-sm text-gray-500">
+                            {quote.date ? new Date(quote.date).toLocaleDateString('ko-KR') : '날짜 미정'}
+                            {quote.time && ` ${quote.time}`}
+                          </div>
+                          <Link
+                            to={`/venues/quotes/edit/${quote.id}`}
+                            className="text-xs text-blush-500 hover:text-blush-600"
+                          >
+                            수정
+                          </Link>
+                        </div>
+                        <p className="text-xl font-bold text-blush-600">
+                          {(quote.estimate || 0).toLocaleString()}원
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-500">
+                          <span>최소 {quote.minGuests || 0}명</span>
+                          <span>식대 {((quote.mealCost || 0) / 10000).toFixed(0)}만원</span>
+                          <span>대관 {((quote.rentalFee || 0) / 10000).toFixed(0)}만원</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 bg-gray-50 rounded-lg">
+                    <p className="text-gray-400 mb-2">아직 등록된 견적이 없습니다</p>
+                    <Link
+                      to={`/venues/${selectedVenue.id}/quotes/add`}
+                      className="text-sm text-blush-500 hover:text-blush-600"
+                    >
+                      첫 견적 추가하기
+                    </Link>
                   </div>
                 )}
 
                 <div className="flex gap-2 pt-2">
                   <Link
-                    to={`/venues/edit/${selectedVenue.id}`}
+                    to={`/venues/${selectedVenue.id}/quotes/add`}
                     className="btn-primary flex-1 flex items-center justify-center gap-2"
                   >
-                    <FaEdit /> 수정하기
+                    + 견적 추가
                   </Link>
                   <Link
                     to="/venues"
-                    className="btn-secondary flex-1 text-center"
+                    className="btn-secondary flex-1 flex items-center justify-center gap-2"
                   >
-                    전체 목록
+                    <FaList /> 전체 목록
                   </Link>
                 </div>
               </div>

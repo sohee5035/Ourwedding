@@ -1,32 +1,66 @@
 import { useState, useEffect } from 'react';
 import { useVenueStore } from '../store/venueStore';
 import { Link } from 'react-router-dom';
-import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock } from 'react-icons/fa';
+import type { VenueQuote } from '../types';
 
 const Venues = () => {
-  const { venues, deleteVenue, fetchVenues } = useVenueStore();
-  const [sortBy, setSortBy] = useState<'name' | 'estimate' | 'recent'>('recent');
+  const { venues, venueQuotes, deleteVenue, deleteVenueQuote, fetchVenues, fetchVenueQuotes, getVenuesWithQuotes } = useVenueStore();
+  const [sortBy, setSortBy] = useState<'name' | 'quotes' | 'recent'>('recent');
+  const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchVenues();
-  }, [fetchVenues]);
+    fetchVenueQuotes();
+  }, [fetchVenues, fetchVenueQuotes]);
 
-  const sortedVenues = [...venues].sort((a, b) => {
+  const venuesWithQuotes = getVenuesWithQuotes();
+
+  const sortedVenues = [...venuesWithQuotes].sort((a, b) => {
     switch (sortBy) {
       case 'name':
         return a.name.localeCompare(b.name);
-      case 'estimate':
-        return a.estimate - b.estimate;
+      case 'quotes':
+        return b.quotes.length - a.quotes.length;
       case 'recent':
       default:
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`"${name}" 웨딩홀을 삭제하시겠습니까?`)) {
+  const toggleVenue = (venueId: string) => {
+    setExpandedVenues((prev) => {
+      const next = new Set(prev);
+      if (next.has(venueId)) {
+        next.delete(venueId);
+      } else {
+        next.add(venueId);
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteVenue = (id: string, name: string) => {
+    if (window.confirm(`"${name}" 웨딩홀과 모든 견적을 삭제하시겠습니까?`)) {
       deleteVenue(id);
     }
+  };
+
+  const handleDeleteQuote = (quoteId: string, venueName: string) => {
+    if (window.confirm(`"${venueName}" 견적을 삭제하시겠습니까?`)) {
+      deleteVenueQuote(quoteId);
+    }
+  };
+
+  const formatDate = (date?: string) => {
+    if (!date) return '날짜 미정';
+    const d = new Date(date);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
+  const formatTime = (time?: string) => {
+    if (!time) return '';
+    return time;
   };
 
   return (
@@ -34,14 +68,15 @@ const Venues = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">웨딩홀 리스트</h1>
-          <p className="text-gray-600 mt-2">총 {venues.length}개 웨딩홀</p>
+          <p className="text-gray-600 mt-2">
+            총 {venues.length}개 웨딩홀, {venueQuotes.length}개 견적
+          </p>
         </div>
-        <Link to="/venues/add" className="btn-primary flex items-center gap-2">
+        <Link to="/venues/add" className="btn-primary flex items-center gap-2" data-testid="add-venue-button">
           <FaPlus /> 웨딩홀 추가
         </Link>
       </div>
 
-      {/* 정렬 */}
       <div className="card">
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">정렬:</label>
@@ -49,15 +84,15 @@ const Venues = () => {
             className="input-field max-w-xs"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
+            data-testid="sort-select"
           >
             <option value="recent">최근 등록순</option>
             <option value="name">이름순</option>
-            <option value="estimate">견적순</option>
+            <option value="quotes">견적 많은순</option>
           </select>
         </div>
       </div>
 
-      {/* 웨딩홀 목록 */}
       {venues.length === 0 ? (
         <div className="card text-center py-12">
           <p className="text-gray-500 mb-4">아직 등록된 웨딩홀이 없습니다</p>
@@ -66,77 +101,203 @@ const Venues = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedVenues.map((venue) => (
-            <div key={venue.id} className="card hover:shadow-lg transition-shadow">
-              {/* 사진 */}
-              {venue.photos.length > 0 ? (
-                <img
-                  src={venue.photos[0]}
-                  alt={venue.name}
-                  className="w-full h-48 object-cover rounded-lg mb-4"
-                />
-              ) : (
-                <div className="w-full h-48 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-lg mb-4 flex items-center justify-center">
-                  <FaMapMarkerAlt className="text-6xl text-blush-300" />
-                </div>
-              )}
-
-              {/* 정보 */}
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{venue.name}</h3>
-              <p className="text-sm text-gray-600 mb-3 flex items-start gap-2">
-                <FaMapMarkerAlt className="mt-1 flex-shrink-0" />
-                <span>{venue.address}</span>
-              </p>
-
-              <div className="space-y-2 text-sm text-gray-700 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">견적:</span>
-                  <span className="font-semibold text-blush-600">
-                    {venue.estimate.toLocaleString()}원
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">최소인원:</span>
-                  <span className="font-semibold">{venue.minGuests}명</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">식대:</span>
-                  <span className="font-semibold">{venue.mealCost.toLocaleString()}원</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">대관료:</span>
-                  <span className="font-semibold">{venue.rentalFee.toLocaleString()}원</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">최인근역:</span>
-                  <span className="font-semibold">{venue.nearestStation}</span>
-                </div>
-              </div>
-
-              {venue.memo && (
-                <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
-                  {venue.memo}
-                </p>
-              )}
-
-              {/* 버튼 */}
-              <div className="flex gap-2">
-                <Link
-                  to={`/venues/edit/${venue.id}`}
-                  className="btn-secondary flex-1 text-center flex items-center justify-center gap-2"
+        <div className="space-y-4">
+          {sortedVenues.map((venue) => {
+            const isExpanded = expandedVenues.has(venue.id);
+            
+            return (
+              <div key={venue.id} className="card" data-testid={`venue-card-${venue.id}`}>
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => toggleVenue(venue.id)}
                 >
-                  <FaEdit /> 수정
-                </Link>
-                <button
-                  onClick={() => handleDelete(venue.id, venue.name)}
-                  className="btn-secondary flex items-center justify-center gap-2 text-red-500 hover:text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <FaTrash /> 삭제
-                </button>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <FaMapMarkerAlt className="text-blush-500 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">{venue.name}</h3>
+                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                        <span className="flex items-center gap-1">
+                          <FaMapMarkerAlt className="text-xs" />
+                          {venue.address}
+                        </span>
+                        {venue.nearestStation && (
+                          <span className="flex items-center gap-1">
+                            <FaSubway className="text-blue-500 text-xs" />
+                            {venue.nearestStation}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      견적 {venue.quotes.length}개
+                    </span>
+                    <button
+                      className="p-2 text-gray-400 hover:text-gray-600"
+                      data-testid={`toggle-venue-${venue.id}`}
+                    >
+                      {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                    </button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-medium text-gray-600">견적 목록</h4>
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/venues/${venue.id}/quotes/add`}
+                          className="text-sm text-blush-500 hover:text-blush-600 flex items-center gap-1"
+                          data-testid={`add-quote-${venue.id}`}
+                        >
+                          <FaPlus className="text-xs" /> 견적 추가
+                        </Link>
+                        <Link
+                          to={`/venues/edit/${venue.id}`}
+                          className="text-sm text-gray-500 hover:text-gray-600 flex items-center gap-1"
+                          data-testid={`edit-venue-${venue.id}`}
+                        >
+                          <FaEdit className="text-xs" /> 웨딩홀 정보 수정
+                        </Link>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVenue(venue.id, venue.name);
+                          }}
+                          className="text-sm text-red-400 hover:text-red-500 flex items-center gap-1"
+                          data-testid={`delete-venue-${venue.id}`}
+                        >
+                          <FaTrash className="text-xs" /> 삭제
+                        </button>
+                      </div>
+                    </div>
+
+                    {venue.quotes.length === 0 ? (
+                      <div className="text-center py-6 bg-gray-50 rounded-lg">
+                        <p className="text-gray-400 mb-2">아직 등록된 견적이 없습니다</p>
+                        <Link
+                          to={`/venues/${venue.id}/quotes/add`}
+                          className="text-sm text-blush-500 hover:text-blush-600"
+                        >
+                          첫 견적 추가하기
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {venue.quotes.map((quote: VenueQuote) => (
+                          <QuoteCard
+                            key={quote.id}
+                            quote={quote}
+                            venueName={venue.name}
+                            onDelete={() => handleDeleteQuote(quote.id, venue.name)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface QuoteCardProps {
+  quote: VenueQuote;
+  venueName: string;
+  onDelete: () => void;
+}
+
+const QuoteCard = ({ quote, venueName, onDelete }: QuoteCardProps) => {
+  const formatDate = (date?: string) => {
+    if (!date) return '날짜 미정';
+    const d = new Date(date);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
+  return (
+    <div 
+      className="bg-gradient-to-br from-ivory-50 to-blush-50 rounded-xl p-4 border border-blush-100"
+      data-testid={`quote-card-${quote.id}`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <FaCalendar className="text-blush-400" />
+          <span>{formatDate(quote.date)}</span>
+          {quote.time && (
+            <>
+              <FaClock className="text-blush-400 ml-2" />
+              <span>{quote.time}</span>
+            </>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Link
+            to={`/venues/quotes/edit/${quote.id}`}
+            className="p-1 text-gray-400 hover:text-gray-600"
+            data-testid={`edit-quote-${quote.id}`}
+          >
+            <FaEdit className="text-sm" />
+          </Link>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 text-gray-400 hover:text-red-500"
+            data-testid={`delete-quote-${quote.id}`}
+          >
+            <FaTrash className="text-sm" />
+          </button>
+        </div>
+      </div>
+
+      {quote.photos && quote.photos.length > 0 && (
+        <div className="flex gap-2 mb-3 overflow-x-auto">
+          {quote.photos.slice(0, 3).map((photo, index) => (
+            <img
+              key={index}
+              src={photo}
+              alt={`${venueName} ${index + 1}`}
+              className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+            />
           ))}
+        </div>
+      )}
+
+      <div className="bg-white/80 rounded-lg p-3 mb-3">
+        <p className="text-xs text-gray-500 mb-1">견적</p>
+        <p className="text-xl font-bold text-blush-600">
+          {(quote.estimate || 0).toLocaleString()}원
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-sm">
+        <div className="text-center">
+          <p className="text-xs text-gray-500">최소인원</p>
+          <p className="font-semibold">{quote.minGuests || 0}명</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-500">식대</p>
+          <p className="font-semibold">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-500">대관료</p>
+          <p className="font-semibold">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
+        </div>
+      </div>
+
+      {quote.memo && (
+        <div className="mt-3 pt-3 border-t border-blush-100">
+          <p className="text-xs text-gray-500 mb-1">메모</p>
+          <p className="text-sm text-gray-700">{quote.memo}</p>
         </div>
       )}
     </div>
