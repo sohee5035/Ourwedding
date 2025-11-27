@@ -7,7 +7,8 @@ import {
   insertVenueQuoteSchema,
   insertChecklistItemSchema,
   insertBudgetItemSchema,
-  insertGuestSchema
+  insertGuestSchema,
+  insertSharedNoteSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -256,6 +257,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete guest" });
+    }
+  });
+
+  // Shared Notes
+  app.get("/api/notes", async (req, res) => {
+    try {
+      const notes = await storage.getSharedNotes();
+      res.json(notes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get notes" });
+    }
+  });
+
+  app.post("/api/notes", async (req, res) => {
+    try {
+      const parsed = insertSharedNoteSchema.parse(req.body);
+      const note = await storage.createSharedNote(parsed);
+      res.status(201).json(note);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid note data" });
+    }
+  });
+
+  app.delete("/api/notes/:id", async (req, res) => {
+    try {
+      await storage.deleteSharedNote(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete note" });
     }
   });
 

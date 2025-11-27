@@ -5,7 +5,8 @@ import {
   type ChecklistItem, type InsertChecklistItem,
   type BudgetItem, type InsertBudgetItem,
   type Guest, type InsertGuest,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests
+  type SharedNote, type InsertSharedNote,
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -47,6 +48,11 @@ export interface IStorage {
   createGuest(guest: InsertGuest): Promise<Guest>;
   updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest>;
   deleteGuest(id: string): Promise<void>;
+
+  // Shared Notes
+  getSharedNotes(): Promise<SharedNote[]>;
+  createSharedNote(note: InsertSharedNote): Promise<SharedNote>;
+  deleteSharedNote(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -202,6 +208,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGuest(id: string): Promise<void> {
     await db.delete(guests).where(eq(guests.id, id));
+  }
+
+  // Shared Notes
+  async getSharedNotes(): Promise<SharedNote[]> {
+    return await db.select().from(sharedNotes).orderBy(sharedNotes.createdAt);
+  }
+
+  async createSharedNote(note: InsertSharedNote): Promise<SharedNote> {
+    const [created] = await db.insert(sharedNotes).values(note).returning();
+    return created;
+  }
+
+  async deleteSharedNote(id: string): Promise<void> {
+    await db.delete(sharedNotes).where(eq(sharedNotes.id, id));
   }
 }
 
