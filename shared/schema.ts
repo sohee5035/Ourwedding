@@ -19,11 +19,20 @@ export const venues = pgTable("venues", {
   address: text("address").notNull(),
   lat: real("lat").notNull().default(37.5665),
   lng: real("lng").notNull().default(126.978),
+  nearestStation: text("nearest_station").default(''),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const venueQuotes = pgTable("venue_quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  venueId: varchar("venue_id").notNull().references(() => venues.id, { onDelete: 'cascade' }),
+  date: text("date"),
+  time: text("time"),
   estimate: integer("estimate").default(0),
   minGuests: integer("min_guests").default(0),
   mealCost: integer("meal_cost").default(0),
   rentalFee: integer("rental_fee").default(0),
-  nearestStation: text("nearest_station").default(''),
   memo: text("memo").default(''),
   photos: text("photos").array().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").defaultNow(),
@@ -77,6 +86,12 @@ export const insertVenueSchema = createInsertSchema(venues).omit({
   updatedAt: true,
 });
 
+export const insertVenueQuoteSchema = createInsertSchema(venueQuotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertChecklistItemSchema = createInsertSchema(checklistItems).omit({
   id: true,
   createdAt: true,
@@ -99,6 +114,9 @@ export type WeddingInfo = typeof weddingInfo.$inferSelect;
 
 export type InsertVenue = z.infer<typeof insertVenueSchema>;
 export type Venue = typeof venues.$inferSelect;
+
+export type InsertVenueQuote = z.infer<typeof insertVenueQuoteSchema>;
+export type VenueQuote = typeof venueQuotes.$inferSelect;
 
 export type InsertChecklistItem = z.infer<typeof insertChecklistItemSchema>;
 export type ChecklistItem = typeof checklistItems.$inferSelect;

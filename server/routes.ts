@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { 
   insertWeddingInfoSchema, 
   insertVenueSchema, 
+  insertVenueQuoteSchema,
   insertChecklistItemSchema,
   insertBudgetItemSchema,
   insertGuestSchema
@@ -78,6 +79,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete venue" });
+    }
+  });
+
+  // Venue Quotes
+  app.get("/api/venue-quotes", async (req, res) => {
+    try {
+      const quotes = await storage.getAllVenueQuotes();
+      res.json(quotes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get venue quotes" });
+    }
+  });
+
+  app.get("/api/venues/:venueId/quotes", async (req, res) => {
+    try {
+      const quotes = await storage.getVenueQuotes(req.params.venueId);
+      res.json(quotes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get venue quotes" });
+    }
+  });
+
+  app.get("/api/venue-quotes/:id", async (req, res) => {
+    try {
+      const quote = await storage.getVenueQuote(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
+      res.json(quote);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get venue quote" });
+    }
+  });
+
+  app.post("/api/venue-quotes", async (req, res) => {
+    try {
+      const parsed = insertVenueQuoteSchema.parse(req.body);
+      const quote = await storage.createVenueQuote(parsed);
+      res.status(201).json(quote);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid venue quote data" });
+    }
+  });
+
+  app.patch("/api/venue-quotes/:id", async (req, res) => {
+    try {
+      const parsed = insertVenueQuoteSchema.partial().parse(req.body);
+      const quote = await storage.updateVenueQuote(req.params.id, parsed);
+      res.json(quote);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid venue quote data" });
+    }
+  });
+
+  app.delete("/api/venue-quotes/:id", async (req, res) => {
+    try {
+      await storage.deleteVenueQuote(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete venue quote" });
     }
   });
 

@@ -1,10 +1,11 @@
 import { 
   type WeddingInfo, type InsertWeddingInfo,
   type Venue, type InsertVenue,
+  type VenueQuote, type InsertVenueQuote,
   type ChecklistItem, type InsertChecklistItem,
   type BudgetItem, type InsertBudgetItem,
   type Guest, type InsertGuest,
-  weddingInfo, venues, checklistItems, budgetItems, guests
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -20,6 +21,14 @@ export interface IStorage {
   createVenue(venue: InsertVenue): Promise<Venue>;
   updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue>;
   deleteVenue(id: string): Promise<void>;
+
+  // Venue Quotes
+  getVenueQuotes(venueId: string): Promise<VenueQuote[]>;
+  getAllVenueQuotes(): Promise<VenueQuote[]>;
+  getVenueQuote(id: string): Promise<VenueQuote | undefined>;
+  createVenueQuote(quote: InsertVenueQuote): Promise<VenueQuote>;
+  updateVenueQuote(id: string, quote: Partial<InsertVenueQuote>): Promise<VenueQuote>;
+  deleteVenueQuote(id: string): Promise<void>;
 
   // Checklist
   getChecklistItems(): Promise<ChecklistItem[]>;
@@ -92,6 +101,38 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVenue(id: string): Promise<void> {
     await db.delete(venues).where(eq(venues.id, id));
+  }
+
+  // Venue Quotes
+  async getVenueQuotes(venueId: string): Promise<VenueQuote[]> {
+    return await db.select().from(venueQuotes).where(eq(venueQuotes.venueId, venueId)).orderBy(venueQuotes.createdAt);
+  }
+
+  async getAllVenueQuotes(): Promise<VenueQuote[]> {
+    return await db.select().from(venueQuotes).orderBy(venueQuotes.createdAt);
+  }
+
+  async getVenueQuote(id: string): Promise<VenueQuote | undefined> {
+    const [quote] = await db.select().from(venueQuotes).where(eq(venueQuotes.id, id));
+    return quote || undefined;
+  }
+
+  async createVenueQuote(quote: InsertVenueQuote): Promise<VenueQuote> {
+    const [created] = await db.insert(venueQuotes).values(quote).returning();
+    return created;
+  }
+
+  async updateVenueQuote(id: string, quote: Partial<InsertVenueQuote>): Promise<VenueQuote> {
+    const [updated] = await db
+      .update(venueQuotes)
+      .set({ ...quote, updatedAt: new Date() })
+      .where(eq(venueQuotes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteVenueQuote(id: string): Promise<void> {
+    await db.delete(venueQuotes).where(eq(venueQuotes.id, id));
   }
 
   // Checklist
