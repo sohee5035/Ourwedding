@@ -1,21 +1,14 @@
 import { useWeddingInfoStore } from '../store/weddingInfoStore';
-import { useVenueStore } from '../store/venueStore';
-import { useChecklistStore } from '../store/checklistStore';
-import { useBudgetStore } from '../store/budgetStore';
-import { useGuestStore } from '../store/guestStore';
-import { FaHeart, FaEdit } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
+import { useNotesStore } from '../store/notesStore';
+import { FaHeart, FaEdit, FaPaperPlane, FaTrash } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
-  const venues = useVenueStore((state) => state.venues);
-  const checklistItems = useChecklistStore((state) => state.items);
-  const guests = useGuestStore((state) => state.guests);
-  const fetchVenues = useVenueStore((state) => state.fetchVenues);
-  const fetchChecklistItems = useChecklistStore((state) => state.fetchItems);
-  const fetchGuests = useGuestStore((state) => state.fetchGuests);
-  const fetchBudgetItems = useBudgetStore((state) => state.fetchItems);
-
+  const { notes, fetchNotes, addNote, deleteNote, isLoading } = useNotesStore();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     groomName: weddingInfo.groomName || '',
@@ -23,18 +16,24 @@ const Home = () => {
     weddingDate: weddingInfo.weddingDate || '',
     totalBudget: weddingInfo.totalBudget || 0,
   });
+  
+  const [noteContent, setNoteContent] = useState('');
+  const [authorName, setAuthorName] = useState('');
+  const [showAuthorInput, setShowAuthorInput] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch all data on mount
     weddingInfo.fetchInfo();
-    fetchVenues();
-    fetchChecklistItems();
-    fetchGuests();
-    fetchBudgetItems();
+    fetchNotes();
+    const savedAuthor = localStorage.getItem('wedding-note-author');
+    if (savedAuthor) {
+      setAuthorName(savedAuthor);
+    } else {
+      setShowAuthorInput(true);
+    }
   }, []);
 
   useEffect(() => {
-    // Update form data when wedding info changes
     setFormData({
       groomName: weddingInfo.groomName || '',
       brideName: weddingInfo.brideName || '',
@@ -43,169 +42,246 @@ const Home = () => {
     });
   }, [weddingInfo.groomName, weddingInfo.brideName, weddingInfo.weddingDate, weddingInfo.totalBudget]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [notes]);
+
   const daysUntil = weddingInfo.getDaysUntilWedding();
-  const completedTasks = checklistItems.filter((item) => item.completed).length;
-  const totalBudget = useBudgetStore.getState().getTotalBudget();
-  const totalActual = useBudgetStore.getState().getTotalActual();
-  const attendingGuests = useGuestStore.getState().getAttendingCount();
 
   const handleSave = async () => {
     await weddingInfo.updateInfo(formData);
     setIsEditing(false);
   };
 
-  return (
-    <div className="space-y-8">
-      {/* D-Day 카운터 */}
-      <div className="card bg-gradient-to-r from-blush-100 to-lavender-100 border-none">
-        <div className="text-center">
-          <FaHeart className="text-6xl text-blush-400 mx-auto mb-4" />
+  const handleSubmitNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteContent.trim()) return;
+    
+    if (!authorName.trim()) {
+      setShowAuthorInput(true);
+      return;
+    }
+    
+    await addNote({
+      author: authorName.trim(),
+      content: noteContent.trim(),
+    });
+    setNoteContent('');
+  };
 
-          {!isEditing ? (
-            <>
-              <h1 className="text-xl font-bold text-gray-800 mb-2">
+  const handleSetAuthor = () => {
+    if (authorName.trim()) {
+      localStorage.setItem('wedding-note-author', authorName.trim());
+      setShowAuthorInput(false);
+    }
+  };
+
+  const getAuthorColor = (name: string) => {
+    const colors = [
+      'bg-blush-100 text-blush-700',
+      'bg-lavender-100 text-lavender-700',
+      'bg-gold-100 text-gold-700',
+      'bg-rose-100 text-rose-700',
+      'bg-purple-100 text-purple-700',
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const isMyNote = (author: string) => {
+    return author === authorName;
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-140px)]">
+      {!isEditing ? (
+        <div 
+          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-4 cursor-pointer"
+          onClick={() => setIsEditing(true)}
+          data-testid="header-card"
+        >
+          <div className="flex items-center gap-3">
+            <FaHeart className="text-2xl text-blush-400" />
+            <div>
+              <h1 className="text-base font-bold text-gray-800">
                 {formData.groomName && formData.brideName
                   ? `${formData.groomName} ❤️ ${formData.brideName}`
                   : '우리의 결혼을 준비해요'}
               </h1>
-
-              {daysUntil !== null && (
-                <div className="mt-4">
-                  <p className="text-5xl font-bold text-blush-500 mb-2">D-{daysUntil}</p>
-                  <p className="text-gray-600">
-                    {new Date(formData.weddingDate).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
+              {formData.weddingDate && (
+                <p className="text-xs text-gray-600">
+                  {format(new Date(formData.weddingDate), 'yyyy년 M월 d일', { locale: ko })}
+                </p>
               )}
-
-              <button
-                onClick={() => setIsEditing(true)}
-                className="mt-4 text-blush-500 hover:text-blush-600 flex items-center gap-2 mx-auto"
-              >
-                <FaEdit /> 정보 수정
-              </button>
-            </>
-          ) : (
-            <div className="space-y-4 max-w-md mx-auto">
+            </div>
+          </div>
+          {daysUntil !== null && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-blush-500">D-{daysUntil}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="card mb-4 bg-gradient-to-r from-blush-100 to-lavender-100 border-none">
+          <div className="space-y-4 max-w-md mx-auto">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">신랑 이름</label>
+                <label className="label text-sm">신랑 이름</label>
                 <input
                   type="text"
                   className="input-field"
                   value={formData.groomName}
                   onChange={(e) => setFormData({ ...formData, groomName: e.target.value })}
-                  placeholder="신랑 이름"
+                  placeholder="신랑"
+                  data-testid="input-groom-name"
                 />
               </div>
-
               <div>
-                <label className="label">신부 이름</label>
+                <label className="label text-sm">신부 이름</label>
                 <input
                   type="text"
                   className="input-field"
                   value={formData.brideName}
                   onChange={(e) => setFormData({ ...formData, brideName: e.target.value })}
-                  placeholder="신부 이름"
+                  placeholder="신부"
+                  data-testid="input-bride-name"
                 />
-              </div>
-
-              <div>
-                <label className="label">결혼식 날짜</label>
-                <input
-                  type="date"
-                  className="input-field"
-                  value={formData.weddingDate}
-                  onChange={(e) => setFormData({ ...formData, weddingDate: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="label">총 예산 (원)</label>
-                <input
-                  type="number"
-                  className="input-field"
-                  value={formData.totalBudget}
-                  onChange={(e) =>
-                    setFormData({ ...formData, totalBudget: Number(e.target.value) })
-                  }
-                  placeholder="총 예산"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={handleSave} className="btn-primary flex-1">
-                  저장
-                </button>
-                <button onClick={() => setIsEditing(false)} className="btn-secondary flex-1">
-                  취소
-                </button>
               </div>
             </div>
-          )}
+
+            <div>
+              <label className="label text-sm">결혼식 날짜</label>
+              <input
+                type="date"
+                className="input-field"
+                value={formData.weddingDate}
+                onChange={(e) => setFormData({ ...formData, weddingDate: e.target.value })}
+                data-testid="input-wedding-date"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={handleSave} className="btn-primary flex-1" data-testid="button-save-info">
+                저장
+              </button>
+              <button onClick={() => setIsEditing(false)} className="btn-secondary flex-1" data-testid="button-cancel">
+                취소
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-gray-800">공유 메모</h2>
+        {authorName && (
+          <button
+            onClick={() => setShowAuthorInput(true)}
+            className="text-xs text-gray-500 hover:text-blush-500 flex items-center gap-1"
+            data-testid="button-change-author"
+          >
+            <FaEdit className="text-xs" />
+            {authorName}
+          </button>
+        )}
       </div>
 
-      {/* 통계 카드들 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card">
-          <h3 className="text-gray-600 text-sm mb-2">등록된 웨딩홀</h3>
-          <p className="text-3xl font-bold text-blush-500">{venues.length}</p>
+      {showAuthorInput && (
+        <div className="bg-ivory-50 border border-blush-200 rounded-xl p-4 mb-4">
+          <p className="text-sm text-gray-700 mb-3">메모를 작성할 이름을 입력해주세요</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="input-field flex-1"
+              value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)}
+              placeholder="이름 (예: 신랑, 신부)"
+              data-testid="input-author-name"
+            />
+            <button 
+              onClick={handleSetAuthor} 
+              className="btn-primary"
+              data-testid="button-set-author"
+            >
+              확인
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="card">
-          <h3 className="text-gray-600 text-sm mb-2">체크리스트</h3>
-          <p className="text-3xl font-bold text-blush-500">
-            {completedTasks}/{checklistItems.length}
-          </p>
-        </div>
-
-        <div className="card">
-          <h3 className="text-gray-600 text-sm mb-2">예산 집행률</h3>
-          <p className="text-3xl font-bold text-blush-500">
-            {totalBudget > 0 ? Math.round((totalActual / totalBudget) * 100) : 0}%
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {totalActual.toLocaleString()} / {totalBudget.toLocaleString()}원
-          </p>
-        </div>
-
-        <div className="card">
-          <h3 className="text-gray-600 text-sm mb-2">참석 하객</h3>
-          <p className="text-3xl font-bold text-blush-500">
-            {attendingGuests}/{guests.length}
-          </p>
-        </div>
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <p className="text-gray-500">메모를 불러오는 중...</p>
+          </div>
+        ) : notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center">
+            <FaHeart className="text-4xl text-blush-300 mb-3" />
+            <p className="text-gray-500 mb-1">아직 메모가 없어요</p>
+            <p className="text-sm text-gray-400">결혼 준비하면서 이야기를 나눠보세요!</p>
+          </div>
+        ) : (
+          notes.map((note) => (
+            <div
+              key={note.id}
+              className={`flex ${isMyNote(note.author) ? 'justify-end' : 'justify-start'}`}
+              data-testid={`note-item-${note.id}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  isMyNote(note.author)
+                    ? 'bg-blush-400 text-white rounded-br-sm'
+                    : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
+                }`}
+              >
+                {!isMyNote(note.author) && (
+                  <p className={`text-xs font-semibold mb-1 ${getAuthorColor(note.author)} inline-block px-2 py-0.5 rounded-full`}>
+                    {note.author}
+                  </p>
+                )}
+                <p className={`text-sm leading-relaxed ${isMyNote(note.author) ? 'text-white' : 'text-gray-800'}`}>
+                  {note.content}
+                </p>
+                <div className="flex items-center justify-between mt-2 gap-2">
+                  <p className={`text-xs ${isMyNote(note.author) ? 'text-blush-100' : 'text-gray-400'}`}>
+                    {note.createdAt && format(new Date(note.createdAt), 'M/d a h:mm', { locale: ko })}
+                  </p>
+                  {isMyNote(note.author) && (
+                    <button
+                      onClick={() => deleteNote(note.id)}
+                      className="text-blush-200 hover:text-white transition-colors"
+                      data-testid={`button-delete-note-${note.id}`}
+                    >
+                      <FaTrash className="text-xs" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* 최근 활동 */}
-      <div className="card">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">시작하기</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a href="/map" className="p-4 border border-blush-200 rounded-lg hover:bg-blush-50 transition-colors">
-            <h3 className="font-bold text-blush-600 mb-2">📍 웨딩홀 찾기</h3>
-            <p className="text-sm text-gray-600">지도에서 웨딩홀을 찾아보세요</p>
-          </a>
-
-          <a href="/checklist" className="p-4 border border-blush-200 rounded-lg hover:bg-blush-50 transition-colors">
-            <h3 className="font-bold text-blush-600 mb-2">✅ 준비 체크리스트</h3>
-            <p className="text-sm text-gray-600">해야 할 일을 정리하세요</p>
-          </a>
-
-          <a href="/budget" className="p-4 border border-blush-200 rounded-lg hover:bg-blush-50 transition-colors">
-            <h3 className="font-bold text-blush-600 mb-2">💰 예산 관리</h3>
-            <p className="text-sm text-gray-600">예산을 계획하고 관리하세요</p>
-          </a>
-
-          <a href="/guests" className="p-4 border border-blush-200 rounded-lg hover:bg-blush-50 transition-colors">
-            <h3 className="font-bold text-blush-600 mb-2">👥 하객 관리</h3>
-            <p className="text-sm text-gray-600">하객 명단을 관리하세요</p>
-          </a>
-        </div>
-      </div>
+      <form onSubmit={handleSubmitNote} className="flex gap-2 mt-auto">
+        <input
+          type="text"
+          className="input-field flex-1"
+          value={noteContent}
+          onChange={(e) => setNoteContent(e.target.value)}
+          placeholder={authorName ? "메모를 입력하세요..." : "이름을 먼저 설정해주세요"}
+          disabled={!authorName}
+          data-testid="input-note-content"
+        />
+        <button
+          type="submit"
+          className="btn-primary px-4"
+          disabled={!noteContent.trim() || !authorName}
+          data-testid="button-send-note"
+        >
+          <FaPaperPlane />
+        </button>
+      </form>
     </div>
   );
 };
