@@ -66,8 +66,9 @@ export interface IStorage {
   // Members
   createMember(member: InsertMember): Promise<Member>;
   getMember(id: string): Promise<Member | undefined>;
-  getMemberByName(name: string): Promise<Member | undefined>;
+  getMemberByNameAndPinHash(name: string, pinHash: string): Promise<Member | undefined>;
   getMembersByCouple(coupleId: string): Promise<Member[]>;
+  getMemberByNameInCouple(coupleId: string, name: string): Promise<Member | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -280,13 +281,22 @@ export class DatabaseStorage implements IStorage {
     return member || undefined;
   }
 
-  async getMemberByName(name: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.name, name));
+  async getMemberByNameAndPinHash(name: string, pinHash: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(
+      and(eq(members.name, name), eq(members.pinHash, pinHash))
+    );
     return member || undefined;
   }
 
   async getMembersByCouple(coupleId: string): Promise<Member[]> {
     return await db.select().from(members).where(eq(members.coupleId, coupleId));
+  }
+
+  async getMemberByNameInCouple(coupleId: string, name: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(
+      and(eq(members.coupleId, coupleId), eq(members.name, name))
+    );
+    return member || undefined;
   }
 }
 

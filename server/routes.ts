@@ -309,11 +309,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { name, pin } = registerSchema.parse(req.body);
       
-      const existingMember = await storage.getMemberByName(name);
-      if (existingMember) {
-        return res.status(400).json({ error: "이미 사용 중인 이름입니다" });
-      }
-      
       const inviteCode = generateInviteCode();
       const couple = await storage.createCouple({ inviteCode });
       
@@ -358,9 +353,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "이미 커플이 완성되었습니다" });
       }
       
-      const existingMember = await storage.getMemberByName(name);
-      if (existingMember) {
-        return res.status(400).json({ error: "이미 사용 중인 이름입니다" });
+      const sameNameInCouple = await storage.getMemberByNameInCouple(couple.id, name);
+      if (sameNameInCouple) {
+        return res.status(400).json({ error: "같은 커플 내에 동일한 이름이 있습니다" });
       }
       
       const pinHash = hashPin(pin);
@@ -393,13 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { name, pin } = loginSchema.parse(req.body);
       
-      const member = await storage.getMemberByName(name);
-      if (!member) {
-        return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
-      }
-      
       const pinHash = hashPin(pin);
-      if (member.pinHash !== pinHash) {
+      const member = await storage.getMemberByNameAndPinHash(name, pinHash);
+      if (!member) {
         return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
       }
       
