@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useVenueStore } from '../store/venueStore';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock } from 'react-icons/fa';
 import type { VenueQuote } from '../types';
 

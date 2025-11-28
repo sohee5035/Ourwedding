@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { useVenueStore } from '../store/venueStore';
 import { FaMapMarkerAlt, FaTimes, FaSubway, FaEdit, FaList } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import type { WeddingVenue, VenueQuote } from '../types';
 import 'leaflet/dist/leaflet.css';
 

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'wouter';
 import {
   FaMapMarkedAlt,
   FaListUl,
@@ -6,11 +6,14 @@ import {
   FaMoneyBillWave,
   FaUsers,
   FaHeart,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaSignOutAlt
 } from 'react-icons/fa';
+import { useAuthStore } from '../../store/authStore';
 
 const Navigation = () => {
-  const location = useLocation();
+  const [location] = useLocation();
+  const { member, partner, logout } = useAuthStore();
 
   const navItems = [
     { path: '/', icon: FaHeart, label: '홈' },
@@ -21,28 +24,34 @@ const Navigation = () => {
     { path: '/guests', icon: FaUsers, label: '하객' },
   ];
 
+  const handleLogout = async () => {
+    if (confirm('로그아웃 하시겠습니까?')) {
+      await logout();
+    }
+  };
+
   return (
     <>
       {/* 데스크톱 상단 네비게이션 */}
       <nav className="hidden md:block bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <Link to="/" className="flex items-center space-x-2 group">
+            <Link href="/" className="flex items-center space-x-2 group">
               <div className="bg-blush-100 p-2 rounded-full group-hover:bg-blush-200 transition-colors">
                 <FaHeart className="text-blush-400 text-xl" />
               </div>
               <span className="text-2xl font-serif font-bold text-gray-800 tracking-tight">Our Wedding</span>
             </Link>
 
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = location === item.path;
 
                 return (
                   <Link
                     key={item.path}
-                    to={item.path}
+                    href={item.path}
                     className={`flex items-center space-x-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
                       isActive
                         ? 'bg-blush-50 text-blush-600 font-semibold shadow-sm ring-1 ring-blush-100'
@@ -55,16 +64,33 @@ const Navigation = () => {
                 );
               })}
               <Link
-                to="/map"
+                href="/map"
                 className={`flex items-center space-x-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
-                  location.pathname === '/map'
+                  location === '/map'
                     ? 'bg-blush-50 text-blush-600 font-semibold shadow-sm ring-1 ring-blush-100'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-blush-500'
                 }`}
               >
-                <FaMapMarkedAlt className={`text-lg ${location.pathname === '/map' ? 'text-blush-500' : 'text-gray-400'}`} />
+                <FaMapMarkedAlt className={`text-lg ${location === '/map' ? 'text-blush-500' : 'text-gray-400'}`} />
                 <span className="text-sm">지도</span>
               </Link>
+              
+              <div className="border-l border-gray-200 h-8 mx-2"></div>
+              
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>{member?.name}</span>
+                {partner && <span className="text-blush-400">❤️</span>}
+                {partner && <span>{partner.name}</span>}
+              </div>
+              
+              <button
+                onClick={handleLogout}
+                className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                title="로그아웃"
+                data-testid="button-logout"
+              >
+                <FaSignOutAlt />
+              </button>
             </div>
           </div>
         </div>
@@ -72,13 +98,26 @@ const Navigation = () => {
 
       {/* 모바일 상단 헤더 */}
       <div className="md:hidden bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
-        <div className="px-4 h-14 flex items-center justify-center">
-          <Link to="/" className="flex items-center space-x-2">
+        <div className="px-4 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
             <div className="bg-blush-100 p-1.5 rounded-full">
               <FaHeart className="text-blush-400 text-lg" />
             </div>
             <span className="text-lg font-serif font-bold text-gray-800">Our Wedding</span>
           </Link>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              {member?.name} {partner ? `❤️ ${partner.name}` : ''}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-500 p-2"
+              data-testid="button-logout-mobile"
+            >
+              <FaSignOutAlt className="text-sm" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -87,12 +126,12 @@ const Navigation = () => {
         <div className="flex justify-around items-center px-2 py-2 safe-bottom">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location === item.path;
 
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                href={item.path}
                 data-testid={`nav-${item.label}`}
                 className={`flex flex-col items-center justify-center min-w-[60px] py-2 px-1 rounded-lg transition-all ${
                   isActive 

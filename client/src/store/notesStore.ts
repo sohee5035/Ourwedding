@@ -16,7 +16,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   fetchNotes: async () => {
     set({ isLoading: true });
     try {
-      const response = await fetch('/api/notes');
+      const response = await fetch('/api/notes', { credentials: 'include' });
       if (response.ok) {
         const notes = await response.json();
         set({ notes });
@@ -33,6 +33,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const response = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(note),
       });
       if (response.ok) {
@@ -48,6 +49,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     try {
       const response = await fetch(`/api/notes/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (response.ok) {
         set({ notes: get().notes.filter((n) => n.id !== id) });

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useRoute } from 'wouter';
 import { useVenueStore } from '../store/venueStore';
 import { FaSave, FaTimes, FaTrash, FaPlus } from 'react-icons/fa';
 
 const QuoteForm = () => {
-  const { venueId, quoteId } = useParams();
-  const navigate = useNavigate();
+  const [, addParams] = useRoute('/venues/:venueId/quotes/add');
+  const [, editParams] = useRoute('/venues/quotes/edit/:quoteId');
+  const [, setLocation] = useLocation();
+  const venueId = addParams?.venueId;
+  const quoteId = editParams?.quoteId;
   const { 
     addVenueQuote, 
     updateVenueQuote, 
@@ -62,7 +65,7 @@ const QuoteForm = () => {
         await addVenueQuote(formData);
       }
       await Promise.all([fetchVenues(), fetchVenueQuotes()]);
-      navigate('/venues');
+      setLocation('/venues');
     } catch (error) {
       console.error('Failed to save quote:', error);
       alert('저장에 실패했습니다.');
@@ -263,7 +266,7 @@ const QuoteForm = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/venues')}
+            onClick={() => setLocation('/venues')}
             className="btn-secondary flex-1 flex items-center justify-center gap-2"
             data-testid="button-cancel"
           >

@@ -1,6 +1,7 @@
 import { useWeddingInfoStore } from '../store/weddingInfoStore';
 import { useNotesStore } from '../store/notesStore';
-import { FaHeart, FaEdit, FaPaperPlane, FaTrash } from 'react-icons/fa';
+import { useAuthStore } from '../store/authStore';
+import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck } from 'react-icons/fa';
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -8,6 +9,7 @@ import { ko } from 'date-fns/locale';
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
   const { notes, fetchNotes, addNote, deleteNote, isLoading } = useNotesStore();
+  const { member, couple, partner } = useAuthStore();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,19 +20,12 @@ const Home = () => {
   });
   
   const [noteContent, setNoteContent] = useState('');
-  const [authorName, setAuthorName] = useState('');
-  const [showAuthorInput, setShowAuthorInput] = useState(false);
+  const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     weddingInfo.fetchInfo();
     fetchNotes();
-    const savedAuthor = localStorage.getItem('wedding-note-author');
-    if (savedAuthor) {
-      setAuthorName(savedAuthor);
-    } else {
-      setShowAuthorInput(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -55,24 +50,22 @@ const Home = () => {
 
   const handleSubmitNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteContent.trim()) return;
-    
-    if (!authorName.trim()) {
-      setShowAuthorInput(true);
-      return;
-    }
+    if (!noteContent.trim() || !member) return;
     
     await addNote({
-      author: authorName.trim(),
+      author: member.name,
       content: noteContent.trim(),
+      coupleId: couple?.id,
+      memberId: member.id,
     });
     setNoteContent('');
   };
 
-  const handleSetAuthor = () => {
-    if (authorName.trim()) {
-      localStorage.setItem('wedding-note-author', authorName.trim());
-      setShowAuthorInput(false);
+  const handleCopyCode = async () => {
+    if (couple?.inviteCode) {
+      await navigator.clipboard.writeText(couple.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -89,7 +82,7 @@ const Home = () => {
   };
 
   const isMyNote = (author: string) => {
-    return author === authorName;
+    return author === member?.name;
   };
 
   return (
@@ -172,42 +165,31 @@ const Home = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-gray-800">공유 메모</h2>
-        {authorName && (
-          <button
-            onClick={() => setShowAuthorInput(true)}
-            className="text-xs text-gray-500 hover:text-blush-500 flex items-center gap-1"
-            data-testid="button-change-author"
-          >
-            <FaEdit className="text-xs" />
-            {authorName}
-          </button>
-        )}
-      </div>
-
-      {showAuthorInput && (
-        <div className="bg-ivory-50 border border-blush-200 rounded-xl p-4 mb-4">
-          <p className="text-sm text-gray-700 mb-3">메모를 작성할 이름을 입력해주세요</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="input-field flex-1"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              placeholder="이름 (예: 신랑, 신부)"
-              data-testid="input-author-name"
-            />
-            <button 
-              onClick={handleSetAuthor} 
-              className="btn-primary"
-              data-testid="button-set-author"
+      {!partner && couple && (
+        <div className="bg-gold-50 border border-gold-200 rounded-xl p-4 mb-4">
+          <p className="text-sm text-gray-700 mb-2">상대방을 초대해주세요!</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-white rounded-lg px-4 py-2 text-center font-mono text-xl tracking-widest text-gray-800">
+              {couple.inviteCode}
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className={`p-3 rounded-lg transition-colors ${
+                copied ? 'bg-green-500 text-white' : 'bg-blush-500 text-white hover:bg-blush-600'
+              }`}
+              data-testid="button-copy-code"
             >
-              확인
+              {copied ? <FaCheck /> : <FaCopy />}
             </button>
           </div>
+          <p className="text-xs text-gray-500 mt-2">이 코드를 상대방에게 공유해주세요</p>
         </div>
       )}
+
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-gray-800">공유 메모</h2>
+        <span className="text-xs text-gray-500">{member?.name}으로 작성</span>
+      </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4">
         {isLoading ? (
@@ -269,14 +251,13 @@ const Home = () => {
           className="input-field flex-1"
           value={noteContent}
           onChange={(e) => setNoteContent(e.target.value)}
-          placeholder={authorName ? "메모를 입력하세요..." : "이름을 먼저 설정해주세요"}
-          disabled={!authorName}
+          placeholder="메모를 입력하세요..."
           data-testid="input-note-content"
         />
         <button
           type="submit"
           className="btn-primary px-4"
-          disabled={!noteContent.trim() || !authorName}
+          disabled={!noteContent.trim()}
           data-testid="button-send-note"
         >
           <FaPaperPlane />

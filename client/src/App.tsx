@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Route, Switch } from 'wouter';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Map from './pages/Map';
@@ -9,26 +10,47 @@ import Calendar from './pages/Calendar';
 import Checklist from './pages/Checklist';
 import Budget from './pages/Budget';
 import Guests from './pages/Guests';
+import Auth from './pages/Auth';
+import { useAuthStore } from './store/authStore';
 
 function App() {
+  const { isLoading, isAuthenticated, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ivory-50 to-blush-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blush-300 border-t-blush-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Auth />;
+  }
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="map" element={<Map />} />
-          <Route path="venues" element={<Venues />} />
-          <Route path="venues/add" element={<VenueForm />} />
-          <Route path="venues/edit/:id" element={<VenueForm />} />
-          <Route path="venues/:venueId/quotes/add" element={<QuoteForm />} />
-          <Route path="venues/quotes/edit/:quoteId" element={<QuoteForm />} />
-          <Route path="calendar" element={<Calendar />} />
-          <Route path="checklist" element={<Checklist />} />
-          <Route path="budget" element={<Budget />} />
-          <Route path="guests" element={<Guests />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Layout>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/map" component={Map} />
+        <Route path="/venues" component={Venues} />
+        <Route path="/venues/add" component={VenueForm} />
+        <Route path="/venues/edit/:id" component={VenueForm} />
+        <Route path="/venues/:venueId/quotes/add" component={QuoteForm} />
+        <Route path="/venues/quotes/edit/:quoteId" component={QuoteForm} />
+        <Route path="/calendar" component={Calendar} />
+        <Route path="/checklist" component={Checklist} />
+        <Route path="/budget" component={Budget} />
+        <Route path="/guests" component={Guests} />
+      </Switch>
+    </Layout>
   );
 }
 

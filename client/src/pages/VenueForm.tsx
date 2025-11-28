@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useRoute } from 'wouter';
 import { useVenueStore } from '../store/venueStore';
 import { FaSave, FaTimes, FaPlus } from 'react-icons/fa';
 
 const VenueForm = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const [, params] = useRoute('/venues/edit/:id');
+  const [, setLocation] = useLocation();
+  const id = params?.id;
   const { addVenue, updateVenue, getVenueById, fetchVenues } = useVenueStore();
   const isEdit = !!id;
 
@@ -48,11 +49,11 @@ const VenueForm = () => {
       if (isEdit && id) {
         await updateVenue(id, formData);
         await fetchVenues();
-        navigate('/venues');
+        setLocation('/venues');
       } else {
         const newVenue = await addVenue(formData);
         await fetchVenues();
-        navigate(`/venues/${newVenue.id}/quotes/add`);
+        setLocation(`/venues/${newVenue.id}/quotes/add`);
       }
     } catch (error) {
       console.error('Failed to save venue:', error);
@@ -160,7 +161,7 @@ const VenueForm = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/venues')}
+            onClick={() => setLocation('/venues')}
             className="btn-secondary flex-1 flex items-center justify-center gap-2"
             data-testid="button-cancel"
           >

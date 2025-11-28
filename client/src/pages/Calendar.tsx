@@ -16,7 +16,7 @@ import {
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaList, FaMapMarkerAlt, FaTimes, FaUsers, FaUtensils, FaBuilding } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import type { VenueQuote, WeddingVenue } from '../types';
 
 import {
