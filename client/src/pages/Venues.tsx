@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useVenueStore } from '../store/venueStore';
 import { Link } from 'wouter';
-import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock, FaList, FaMap, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock, FaList, FaMap, FaTimes, FaBuilding } from 'react-icons/fa';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import type { VenueQuote, WeddingVenue } from '../types';
+import { format, parseISO } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import 'leaflet/dist/leaflet.css';
 
 import {
@@ -37,11 +39,21 @@ function MapController({ center, zoom }: { center: [number, number] | null; zoom
   return null;
 }
 
+interface QuoteWithVenue extends VenueQuote {
+  venue: WeddingVenue;
+}
+
+interface DateGroup {
+  date: string;
+  formattedDate: string;
+  quotes: QuoteWithVenue[];
+}
+
 const Venues = () => {
-  const { venues, venueQuotes, deleteVenue, deleteVenueQuote, fetchVenues, fetchVenueQuotes, getVenuesWithQuotes, getQuotesByVenueId } = useVenueStore();
+  const { venues, venueQuotes, deleteVenue, deleteVenueQuote, fetchVenues, fetchVenueQuotes, getVenuesWithQuotes, getQuotesByVenueId, getVenueById } = useVenueStore();
   const [sortBy, setSortBy] = useState<'name' | 'quotes' | 'recent'>('recent');
   const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'date'>('list');
 
   const [selectedVenue, setSelectedVenue] = useState<WeddingVenue | null>(null);
   const [selectedQuotes, setSelectedQuotes] = useState<VenueQuote[]>([]);
@@ -129,6 +141,55 @@ const Venues = () => {
     return Math.min(...estimates);
   };
 
+  const quotesGroupedByDate = useMemo((): DateGroup[] => {
+    const quotesWithDates = venueQuotes.filter(q => q.date);
+    const dateMap = new Map<string, QuoteWithVenue[]>();
+    
+    quotesWithDates.forEach(quote => {
+      const venue = getVenueById(quote.venueId);
+      if (!venue) return;
+      
+      const dateKey = quote.date!;
+      if (!dateMap.has(dateKey)) {
+        dateMap.set(dateKey, []);
+      }
+      dateMap.get(dateKey)!.push({ ...quote, venue });
+    });
+    
+    const groups: DateGroup[] = [];
+    dateMap.forEach((quotes, date) => {
+      let formattedDate = date;
+      try {
+        formattedDate = format(parseISO(date), 'M월 d일 (EEE)', { locale: ko });
+      } catch {
+        formattedDate = date;
+      }
+      groups.push({
+        date,
+        formattedDate,
+        quotes: quotes.sort((a, b) => {
+          if (a.time && b.time) return a.time.localeCompare(b.time);
+          if (a.time) return -1;
+          if (b.time) return 1;
+          return 0;
+        }),
+      });
+    });
+    
+    return groups.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [venueQuotes, getVenueById]);
+
+  const quotesWithoutDate = useMemo((): QuoteWithVenue[] => {
+    return venueQuotes
+      .filter(q => !q.date)
+      .map(quote => {
+        const venue = getVenueById(quote.venueId);
+        if (!venue) return null;
+        return { ...quote, venue };
+      })
+      .filter((q): q is QuoteWithVenue => q !== null);
+  }, [venueQuotes, getVenueById]);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start gap-4">
@@ -147,7 +208,7 @@ const Venues = () => {
         <div className="flex bg-gray-100 rounded-full p-1">
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               viewMode === 'list'
                 ? 'bg-white text-blush-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -157,8 +218,19 @@ const Venues = () => {
             <FaList className="text-xs" /> 목록
           </button>
           <button
+            onClick={() => setViewMode('date')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              viewMode === 'date'
+                ? 'bg-white text-blush-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            data-testid="view-mode-date"
+          >
+            <FaCalendar className="text-xs" /> 날짜별
+          </button>
+          <button
             onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               viewMode === 'map'
                 ? 'bg-white text-blush-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -315,6 +387,193 @@ const Venues = () => {
               </div>
             );
           })}
+        </div>
+      ) : viewMode === 'date' ? (
+        <div className="space-y-6">
+          {quotesGroupedByDate.length === 0 && quotesWithoutDate.length === 0 ? (
+            <div className="card text-center py-12">
+              <FaCalendar className="text-4xl text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">등록된 견적이 없습니다</p>
+              <p className="text-sm text-gray-400">웨딩홀에서 견적을 추가해보세요</p>
+            </div>
+          ) : (
+            <>
+              {quotesGroupedByDate.map((group) => (
+                <div key={group.date} className="card !p-4" data-testid={`date-group-${group.date}`}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-full flex items-center justify-center">
+                      <FaCalendar className="text-blush-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800">{group.formattedDate}</h3>
+                      <p className="text-xs text-gray-500">{group.quotes.length}개 견적</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {group.quotes.map((quote) => (
+                      <div
+                        key={quote.id}
+                        className="bg-gradient-to-r from-ivory-50 to-blush-50 rounded-xl p-4 border border-blush-100"
+                        data-testid={`date-quote-${quote.id}`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {quote.venue.photos && quote.venue.photos.length > 0 ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                <img 
+                                  src={quote.venue.photos[0].url} 
+                                  alt={quote.venue.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FaBuilding className="text-amber-500" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-bold text-gray-800">{quote.venue.name}</h4>
+                              <p className="text-xs text-gray-500 flex items-center gap-1">
+                                <FaClock className="text-blush-400" />
+                                {quote.time || '시간 미정'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Link
+                              to={`/venues/quotes/edit/${quote.id}`}
+                              className="p-1.5 text-gray-400 hover:text-gray-600"
+                              data-testid={`date-edit-quote-${quote.id}`}
+                            >
+                              <FaEdit className="text-sm" />
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteQuote(quote.id, quote.venue.name)}
+                              className="p-1.5 text-gray-400 hover:text-red-500"
+                              data-testid={`date-delete-quote-${quote.id}`}
+                            >
+                              <FaTrash className="text-sm" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-4 gap-2 text-center bg-white/80 rounded-lg p-3">
+                          <div>
+                            <p className="text-xs text-gray-500">견적</p>
+                            <p className="font-bold text-blush-600">
+                              {((quote.estimate || 0) / 10000).toLocaleString()}만원
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">최소인원</p>
+                            <p className="font-semibold text-sm">{quote.minGuests || 0}명</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">식대</p>
+                            <p className="font-semibold text-sm">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">대관료</p>
+                            <p className="font-semibold text-sm">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
+                          </div>
+                        </div>
+                        
+                        {quote.memo && (
+                          <p className="mt-2 text-sm text-gray-600 bg-white/50 rounded-lg px-3 py-2">
+                            {quote.memo}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {quotesWithoutDate.length > 0 && (
+                <div className="card !p-4" data-testid="date-group-undated">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                      <FaCalendar className="text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-600">날짜 미정</h3>
+                      <p className="text-xs text-gray-500">{quotesWithoutDate.length}개 견적</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {quotesWithoutDate.map((quote) => (
+                      <div
+                        key={quote.id}
+                        className="bg-gray-50 rounded-xl p-4 border border-gray-100"
+                        data-testid={`undated-quote-${quote.id}`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {quote.venue.photos && quote.venue.photos.length > 0 ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                <img 
+                                  src={quote.venue.photos[0].url} 
+                                  alt={quote.venue.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FaBuilding className="text-gray-400" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-bold text-gray-700">{quote.venue.name}</h4>
+                              <p className="text-xs text-gray-400">날짜를 설정해주세요</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Link
+                              to={`/venues/quotes/edit/${quote.id}`}
+                              className="p-1.5 text-gray-400 hover:text-gray-600"
+                              data-testid={`undated-edit-quote-${quote.id}`}
+                            >
+                              <FaEdit className="text-sm" />
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteQuote(quote.id, quote.venue.name)}
+                              className="p-1.5 text-gray-400 hover:text-red-500"
+                              data-testid={`undated-delete-quote-${quote.id}`}
+                            >
+                              <FaTrash className="text-sm" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-4 gap-2 text-center bg-white/80 rounded-lg p-3">
+                          <div>
+                            <p className="text-xs text-gray-500">견적</p>
+                            <p className="font-bold text-gray-600">
+                              {((quote.estimate || 0) / 10000).toLocaleString()}만원
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">최소인원</p>
+                            <p className="font-semibold text-sm">{quote.minGuests || 0}명</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">식대</p>
+                            <p className="font-semibold text-sm">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">대관료</p>
+                            <p className="font-semibold text-sm">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <div className="relative h-[60vh] md:h-[500px] rounded-xl overflow-hidden card p-0">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
-import { useVenueStore } from '../store/venueStore';
 import { useCalendarEventStore } from '../store/calendarEventStore';
 import { useEventCategoryStore } from '../store/eventCategoryStore';
 import { 
@@ -26,9 +25,6 @@ import {
   FaCalendarAlt, 
   FaList, 
   FaTimes, 
-  FaUsers, 
-  FaUtensils, 
-  FaBuilding,
   FaPlus,
   FaChevronDown,
   FaChevronUp,
@@ -37,17 +33,7 @@ import {
   FaHeart,
   FaCog,
 } from 'react-icons/fa';
-import { Link } from 'wouter';
-import type { VenueQuote, WeddingVenue } from '../types';
 import type { CalendarEvent, EventCategory } from '@shared/schema';
-
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from '@/components/ui/drawer';
 
 import {
   Dialog,
@@ -55,10 +41,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-interface QuoteWithVenue extends VenueQuote {
-  venue?: WeddingVenue;
-}
 
 const COLOR_PALETTE = [
   { name: 'pink', bg: 'bg-pink-400', bgLight: 'bg-pink-50', text: 'text-pink-500' },
@@ -97,13 +79,10 @@ const getColorClasses = (colorName: string) => {
 
 const Calendar = () => {
   const { items, fetchItems } = useChecklistStore();
-  const { venues, venueQuotes, fetchVenues, fetchVenueQuotes, getVenueById } = useVenueStore();
   const { events, fetchEvents, addEvent, updateEvent, deleteEvent } = useCalendarEventStore();
   const { categories, fetchCategories, addCategory, deleteCategory } = useEventCategoryStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timetable'>('calendar');
-  const [selectedQuote, setSelectedQuote] = useState<QuoteWithVenue | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -129,11 +108,9 @@ const Calendar = () => {
 
   useEffect(() => {
     fetchItems();
-    fetchVenues();
-    fetchVenueQuotes();
     fetchEvents();
     fetchCategories();
-  }, [fetchItems, fetchVenues, fetchVenueQuotes, fetchEvents, fetchCategories]);
+  }, [fetchItems, fetchEvents, fetchCategories]);
 
   const defaultCats = DEFAULT_CATEGORIES.map((cat, i) => ({ 
     id: `default-${i}`, 
@@ -166,18 +143,6 @@ const Calendar = () => {
   const today = () => setCurrentDate(new Date());
 
   const datedItems = items.filter(item => item.date);
-  const datedQuotes = venueQuotes.filter(quote => quote.date);
-
-  const handleQuoteClick = (quote: VenueQuote) => {
-    const venue = getVenueById(quote.venueId);
-    setSelectedQuote({ ...quote, venue: venue || undefined });
-    setIsDrawerOpen(true);
-  };
-
-  const handleDrawerClose = () => {
-    setIsDrawerOpen(false);
-    setSelectedQuote(null);
-  };
 
   const openAddEventModal = (date?: string) => {
     setEditingEvent(null);
@@ -212,8 +177,7 @@ const Calendar = () => {
   const getEventsForDate = (day: Date) => {
     const dateStr = format(day, 'yyyy-MM-dd');
     const dayEvents = events.filter(event => event.date === dateStr);
-    const dayQuotes = venueQuotes.filter(quote => quote.date === dateStr);
-    return { events: dayEvents, quotes: dayQuotes };
+    return dayEvents;
   };
 
   const openEditEventModal = (event: CalendarEvent) => {
@@ -284,20 +248,9 @@ const Calendar = () => {
     );
   };
 
-  const getQuotesForDay = (day: Date) => {
-    return datedQuotes.filter(quote =>
-      quote.date && isSameDay(parseISO(quote.date), day)
-    );
-  };
-
   const getColorBarsForDay = (day: Date) => {
     const dayEvents = getEventsForDay(day);
-    const dayQuotes = getQuotesForDay(day);
     const colors: string[] = [];
-    
-    dayQuotes.forEach(() => {
-      colors.push('bg-amber-400');
-    });
     
     dayEvents.forEach(event => {
       const categoryInfo = getCategoryInfo(event.category);
@@ -321,19 +274,6 @@ const Calendar = () => {
       return 0;
     });
 
-  const allUpcomingQuotes = [...datedQuotes]
-    .filter(q => {
-      if (!q.date) return false;
-      const quoteDate = parseISO(q.date);
-      return isAfter(quoteDate, new Date()) || isSameDay(quoteDate, new Date());
-    })
-    .sort((a, b) => {
-      if (a.date && b.date) {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      }
-      return 0;
-    });
-
   const todayDate = startOfDay(new Date());
   
   const allPastEvents = [...events]
@@ -341,19 +281,6 @@ const Calendar = () => {
       if (!e.date) return false;
       const eventDate = parseISO(e.date);
       return isBefore(eventDate, todayDate);
-    })
-    .sort((a, b) => {
-      if (a.date && b.date) {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-      return 0;
-    });
-
-  const allPastQuotes = [...datedQuotes]
-    .filter(q => {
-      if (!q.date) return false;
-      const quoteDate = parseISO(q.date);
-      return isBefore(quoteDate, todayDate);
     })
     .sort((a, b) => {
       if (a.date && b.date) {
@@ -467,7 +394,6 @@ const Calendar = () => {
                   item.date && isSameDay(parseISO(item.date), day)
                 );
 
-                const dayQuotes = getQuotesForDay(day);
                 const dayEvents = getEventsForDay(day);
                 const colorBars = getColorBarsForDay(day);
 
@@ -475,8 +401,8 @@ const Calendar = () => {
                   <div
                     key={day.toString()}
                     onClick={() => {
-                      const { events: dayEvs, quotes: dayQts } = getEventsForDate(day);
-                      if (dayEvs.length > 0 || dayQts.length > 0) {
+                      const dayEvs = getEventsForDate(day);
+                      if (dayEvs.length > 0) {
                         handleDateClick(day);
                       } else if (!isCalendarExpanded) {
                         openAddEventModal(format(day, 'yyyy-MM-dd'));
@@ -503,24 +429,6 @@ const Calendar = () => {
                     
                     {isCalendarExpanded ? (
                       <div className="mt-2 space-y-1">
-                        {dayQuotes.map(quote => {
-                          const venue = getVenueById(quote.venueId);
-                          return (
-                            <button
-                              key={quote.id}
-                              onClick={(e) => { e.stopPropagation(); handleQuoteClick(quote); }}
-                              className="w-full text-left text-xs px-2 py-1 rounded bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 truncate hover:from-amber-200 hover:to-amber-100 transition-colors flex items-center gap-1"
-                              title={venue?.name || '웨딩홀'}
-                              data-testid={`quote-event-${quote.id}`}
-                            >
-                              <FaBuilding className="text-amber-500 flex-shrink-0" />
-                              <span className="truncate">{venue?.name || '웨딩홀'}</span>
-                              {quote.time && (
-                                <span className="text-amber-500 flex-shrink-0 ml-auto">{quote.time}</span>
-                              )}
-                            </button>
-                          );
-                        })}
                         {dayEvents.map(event => {
                           const categoryInfo = getCategoryInfo(event.category);
                           const colorClasses = getColorClasses(categoryInfo.color);
@@ -570,39 +478,13 @@ const Calendar = () => {
           <div className="card">
             <h3 className="text-lg font-bold text-gray-800 mb-4">다가오는 일정</h3>
 
-            {allUpcomingQuotes.length === 0 && allUpcomingEvents.length === 0 ? (
+            {allUpcomingEvents.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <FaCalendarAlt className="text-3xl mx-auto mb-2" />
                 <p>예정된 일정이 없습니다</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {allUpcomingQuotes.map(quote => {
-                  const venue = getVenueById(quote.venueId);
-                  return (
-                    <button
-                      key={`quote-${quote.id}`}
-                      onClick={() => handleQuoteClick(quote)}
-                      className="w-full flex items-center gap-3 p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors text-left"
-                      data-testid={`upcoming-quote-${quote.id}`}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center">
-                        <FaBuilding className="text-amber-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 truncate">{venue?.name || '웨딩홀 견적'}</p>
-                        <p className="text-sm text-gray-500">
-                          {quote.date ? format(parseISO(quote.date), 'M월 d일 (EEE)', { locale: ko }) : '날짜 미정'}
-                          {quote.time && ` ${quote.time}`}
-                        </p>
-                      </div>
-                      <div className="text-amber-600 font-semibold text-sm">
-                        {((quote.estimate || 0) / 10000).toLocaleString()}만원
-                      </div>
-                    </button>
-                  );
-                })}
-                
                 {allUpcomingEvents.map(event => {
                   const categoryInfo = getCategoryInfo(event.category);
                   const colorClasses = getColorClasses(categoryInfo.color);
@@ -630,7 +512,7 @@ const Calendar = () => {
             )}
           </div>
 
-          {(allPastEvents.length > 0 || allPastQuotes.length > 0) && (
+          {allPastEvents.length > 0 && (
             <div className="card">
               <button
                 onClick={() => setIsPastEventsExpanded(!isPastEventsExpanded)}
@@ -639,39 +521,13 @@ const Calendar = () => {
               >
                 <h3 className="text-lg font-bold text-gray-600">지난 일정</h3>
                 <div className="flex items-center gap-2 text-gray-400">
-                  <span className="text-sm">{allPastEvents.length + allPastQuotes.length}건</span>
+                  <span className="text-sm">{allPastEvents.length}건</span>
                   {isPastEventsExpanded ? <FaChevronUp /> : <FaChevronDown />}
                 </div>
               </button>
 
               {isPastEventsExpanded && (
                 <div className="space-y-3 mt-4 pt-4 border-t">
-                  {allPastQuotes.map(quote => {
-                    const venue = getVenueById(quote.venueId);
-                    return (
-                      <button
-                        key={`past-quote-${quote.id}`}
-                        onClick={() => handleQuoteClick(quote)}
-                        className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left opacity-70"
-                        data-testid={`past-quote-${quote.id}`}
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                          <FaBuilding className="text-gray-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-600 truncate">{venue?.name || '웨딩홀 견적'}</p>
-                          <p className="text-sm text-gray-400">
-                            {quote.date ? format(parseISO(quote.date), 'M월 d일 (EEE)', { locale: ko }) : '날짜 미정'}
-                            {quote.time && ` ${quote.time}`}
-                          </p>
-                        </div>
-                        <div className="text-gray-500 font-semibold text-sm">
-                          {((quote.estimate || 0) / 10000).toLocaleString()}만원
-                        </div>
-                      </button>
-                    );
-                  })}
-                  
                   {allPastEvents.map(event => {
                     const categoryInfo = getCategoryInfo(event.category);
                     const colorClasses = getColorClasses(categoryInfo.color);
@@ -711,114 +567,6 @@ const Calendar = () => {
           </p>
         </div>
       )}
-
-      <Drawer open={isDrawerOpen} onOpenChange={(open) => {
-        setIsDrawerOpen(open);
-        if (!open) setSelectedQuote(null);
-      }}>
-        <DrawerContent className="max-h-[85vh]">
-          {selectedQuote && (
-            <div className="overflow-y-auto">
-              <DrawerHeader className="text-left">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <DrawerTitle className="text-xl flex items-center gap-2">
-                      <FaBuilding className="text-amber-500" />
-                      {selectedQuote.venue?.name || '웨딩홀'}
-                    </DrawerTitle>
-                    <DrawerDescription className="mt-1">
-                      {selectedQuote.venue?.address || '주소 정보 없음'}
-                    </DrawerDescription>
-                  </div>
-                  <button
-                    onClick={handleDrawerClose}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
-              </DrawerHeader>
-
-              <div className="px-4 pb-6 space-y-4">
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
-                  <div className="flex items-center gap-2 text-amber-700 font-medium mb-2">
-                    <FaCalendarAlt />
-                    예식 일정
-                  </div>
-                  <p className="text-xl font-bold text-gray-800">
-                    {selectedQuote.date 
-                      ? format(parseISO(selectedQuote.date), 'yyyy년 M월 d일 (EEE)', { locale: ko })
-                      : '날짜 미정'}
-                    {selectedQuote.time && ` ${selectedQuote.time}`}
-                  </p>
-                </div>
-
-                <div className="bg-amber-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-600 mb-1">견적</p>
-                  <p className="text-2xl font-bold text-amber-600">
-                    {(selectedQuote.estimate || 0).toLocaleString()}원
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaUsers className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">최소인원</p>
-                    <p className="font-semibold">{selectedQuote.minGuests || 0}명</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaUtensils className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">식대</p>
-                    <p className="font-semibold text-sm">{((selectedQuote.mealCost || 0) / 10000).toFixed(0)}만원</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-3 text-center">
-                    <FaBuilding className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500">대관료</p>
-                    <p className="font-semibold text-sm">{((selectedQuote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
-                  </div>
-                </div>
-
-                {selectedQuote.photos && selectedQuote.photos.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {selectedQuote.photos.map((photo, index) => (
-                      <img
-                        key={index}
-                        src={photo}
-                        alt={`${selectedQuote.venue?.name || '웨딩홀'} ${index + 1}`}
-                        className="w-32 h-24 object-cover rounded-lg flex-shrink-0"
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {selectedQuote.memo && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-sm text-gray-500 mb-1">메모</p>
-                    <p className="text-gray-700">{selectedQuote.memo}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Link
-                    to={`/venues/quotes/edit/${selectedQuote.id}`}
-                    className="btn-primary flex-1 text-center"
-                    onClick={handleDrawerClose}
-                  >
-                    견적 수정
-                  </Link>
-                  <Link
-                    to="/venues"
-                    className="btn-secondary flex-1 text-center"
-                    onClick={handleDrawerClose}
-                  >
-                    웨딩홀 목록
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-        </DrawerContent>
-      </Drawer>
 
       <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1130,44 +878,16 @@ const Calendar = () => {
       <Dialog open={isDateEventsModalOpen} onOpenChange={setIsDateEventsModalOpen}>
         <DialogContent className="sm:max-w-md">
           {selectedDate && (() => {
-            const { events: dayEvents, quotes: dayQuotes } = getEventsForDate(selectedDate);
-            const totalCount = dayEvents.length + dayQuotes.length;
+            const dayEvents = getEventsForDate(selectedDate);
             return (
               <>
                 <DialogHeader>
                   <DialogTitle className="text-lg">
                     {format(selectedDate, 'M월 d일 (EEE)', { locale: ko })} 일정
                   </DialogTitle>
-                  <p className="text-sm text-gray-500">{totalCount}개의 일정이 있습니다</p>
+                  <p className="text-sm text-gray-500">{dayEvents.length}개의 일정이 있습니다</p>
                 </DialogHeader>
                 <div className="space-y-2 py-4 max-h-[400px] overflow-y-auto">
-                  {dayQuotes.map(quote => {
-                    const venue = getVenueById(quote.venueId);
-                    return (
-                      <button
-                        key={`quote-${quote.id}`}
-                        onClick={() => {
-                          setIsDateEventsModalOpen(false);
-                          handleQuoteClick(quote);
-                        }}
-                        className="w-full flex items-center gap-3 p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors text-left"
-                        data-testid={`date-modal-quote-${quote.id}`}
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center shrink-0">
-                          <FaBuilding className="text-amber-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-800 truncate">{venue?.name || '웨딩홀 견적'}</p>
-                          <p className="text-sm text-gray-500">
-                            {quote.time || '시간 미정'}
-                          </p>
-                        </div>
-                        <div className="text-amber-600 font-semibold text-sm shrink-0">
-                          {((quote.estimate || 0) / 10000).toLocaleString()}만원
-                        </div>
-                      </button>
-                    );
-                  })}
                   {dayEvents.map(event => {
                     const categoryInfo = getCategoryInfo(event.category);
                     const colorClasses = getColorClasses(categoryInfo.color);
