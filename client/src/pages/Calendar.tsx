@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
 import { useVenueStore } from '../store/venueStore';
 import { useCalendarEventStore } from '../store/calendarEventStore';
+import { useEventCategoryStore } from '../store/eventCategoryStore';
 import { 
   format, 
   startOfMonth, 
@@ -15,7 +16,6 @@ import {
   subMonths,
   parseISO,
   isAfter,
-  isBefore
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { 
@@ -33,15 +33,11 @@ import {
   FaEdit,
   FaTrash,
   FaHeart,
-  FaRing,
-  FaHome,
-  FaTshirt,
-  FaCouch,
-  FaEllipsisH
+  FaCog,
 } from 'react-icons/fa';
 import { Link } from 'wouter';
 import type { VenueQuote, WeddingVenue } from '../types';
-import type { CalendarEvent } from '@shared/schema';
+import type { CalendarEvent, EventCategory } from '@shared/schema';
 
 import {
   Drawer,
@@ -62,23 +58,46 @@ interface QuoteWithVenue extends VenueQuote {
   venue?: WeddingVenue;
 }
 
-const EVENT_CATEGORIES = [
-  { value: '예식장 방문', label: '예식장 방문', color: 'bg-pink-400', icon: FaRing },
-  { value: '상견례', label: '상견례', color: 'bg-purple-400', icon: FaHeart },
-  { value: '가족 식사', label: '가족 식사', color: 'bg-orange-400', icon: FaHome },
-  { value: '드레스 투어', label: '드레스 투어', color: 'bg-rose-400', icon: FaTshirt },
-  { value: '가전가구 상담', label: '가전가구 상담', color: 'bg-teal-400', icon: FaCouch },
-  { value: '기타', label: '기타', color: 'bg-gray-400', icon: FaEllipsisH },
-] as const;
+const COLOR_PALETTE = [
+  { name: 'pink', bg: 'bg-pink-400', text: 'text-pink-600' },
+  { name: 'rose', bg: 'bg-rose-400', text: 'text-rose-600' },
+  { name: 'red', bg: 'bg-red-400', text: 'text-red-600' },
+  { name: 'orange', bg: 'bg-orange-400', text: 'text-orange-600' },
+  { name: 'amber', bg: 'bg-amber-400', text: 'text-amber-600' },
+  { name: 'yellow', bg: 'bg-yellow-400', text: 'text-yellow-600' },
+  { name: 'lime', bg: 'bg-lime-400', text: 'text-lime-600' },
+  { name: 'green', bg: 'bg-green-400', text: 'text-green-600' },
+  { name: 'emerald', bg: 'bg-emerald-400', text: 'text-emerald-600' },
+  { name: 'teal', bg: 'bg-teal-400', text: 'text-teal-600' },
+  { name: 'cyan', bg: 'bg-cyan-400', text: 'text-cyan-600' },
+  { name: 'sky', bg: 'bg-sky-400', text: 'text-sky-600' },
+  { name: 'blue', bg: 'bg-blue-400', text: 'text-blue-600' },
+  { name: 'indigo', bg: 'bg-indigo-400', text: 'text-indigo-600' },
+  { name: 'violet', bg: 'bg-violet-400', text: 'text-violet-600' },
+  { name: 'purple', bg: 'bg-purple-400', text: 'text-purple-600' },
+  { name: 'fuchsia', bg: 'bg-fuchsia-400', text: 'text-fuchsia-600' },
+  { name: 'gray', bg: 'bg-gray-400', text: 'text-gray-600' },
+];
 
-const getCategoryInfo = (category: string) => {
-  return EVENT_CATEGORIES.find(c => c.value === category) || EVENT_CATEGORIES[5];
+const DEFAULT_CATEGORIES = [
+  { name: '예식장 방문', color: 'pink' },
+  { name: '상견례', color: 'purple' },
+  { name: '가족 식사', color: 'orange' },
+  { name: '드레스 투어', color: 'rose' },
+  { name: '가전가구 상담', color: 'teal' },
+  { name: '기타', color: 'gray' },
+];
+
+const getColorClasses = (colorName: string) => {
+  const color = COLOR_PALETTE.find(c => c.name === colorName);
+  return color || COLOR_PALETTE[0];
 };
 
 const Calendar = () => {
   const { items, fetchItems } = useChecklistStore();
   const { venues, venueQuotes, fetchVenues, fetchVenueQuotes, getVenueById } = useVenueStore();
   const { events, fetchEvents, addEvent, updateEvent, deleteEvent } = useCalendarEventStore();
+  const { categories, fetchCategories, addCategory, deleteCategory } = useEventCategoryStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timetable'>('calendar');
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithVenue | null>(null);
@@ -88,6 +107,9 @@ const Calendar = () => {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('pink');
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -102,7 +124,24 @@ const Calendar = () => {
     fetchVenues();
     fetchVenueQuotes();
     fetchEvents();
-  }, [fetchItems, fetchVenues, fetchVenueQuotes, fetchEvents]);
+    fetchCategories();
+  }, [fetchItems, fetchVenues, fetchVenueQuotes, fetchEvents, fetchCategories]);
+
+  const allCategories = categories.length > 0 
+    ? categories 
+    : DEFAULT_CATEGORIES.map((cat, i) => ({ 
+        id: `default-${i}`, 
+        name: cat.name, 
+        color: cat.color, 
+        coupleId: '',
+        createdAt: new Date()
+      }));
+
+  const getCategoryInfo = (categoryName: string): { name: string; color: string } => {
+    const found = allCategories.find(c => c.name === categoryName);
+    if (found) return { name: found.name, color: found.color };
+    return { name: categoryName, color: 'gray' };
+  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -192,6 +231,18 @@ const Calendar = () => {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    await addCategory(newCategoryName.trim(), newCategoryColor);
+    setNewCategoryName('');
+    setNewCategoryColor('pink');
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (id.startsWith('default-')) return;
+    await deleteCategory(id);
+  };
+
   const getEventsForDay = (day: Date) => {
     return events.filter(event => 
       event.date && isSameDay(parseISO(event.date), day)
@@ -215,7 +266,8 @@ const Calendar = () => {
     
     dayEvents.forEach(event => {
       const categoryInfo = getCategoryInfo(event.category);
-      colors.push(categoryInfo.color);
+      const colorClasses = getColorClasses(categoryInfo.color);
+      colors.push(colorClasses.bg);
     });
     
     return colors.slice(0, 4);
@@ -256,6 +308,13 @@ const Calendar = () => {
         </div>
         
         <div className="flex gap-2">
+          <button
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="btn-secondary flex items-center gap-2"
+            data-testid="button-manage-categories"
+          >
+            <FaCog /> 카테고리
+          </button>
           <button
             onClick={() => openAddEventModal()}
             className="btn-primary flex items-center gap-2"
@@ -390,16 +449,16 @@ const Calendar = () => {
                         })}
                         {dayEvents.map(event => {
                           const categoryInfo = getCategoryInfo(event.category);
-                          const IconComponent = categoryInfo.icon;
+                          const colorClasses = getColorClasses(categoryInfo.color);
                           return (
                             <button
                               key={event.id}
                               onClick={() => openEditEventModal(event)}
-                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${categoryInfo.color} bg-opacity-20 hover:bg-opacity-30 transition-colors`}
+                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bg} bg-opacity-20 hover:bg-opacity-30 transition-colors`}
                               title={event.title}
                               data-testid={`calendar-event-${event.id}`}
                             >
-                              <IconComponent className={`flex-shrink-0 ${categoryInfo.color.replace('bg-', 'text-').replace('-400', '-600')}`} />
+                              <FaHeart className={`flex-shrink-0 ${colorClasses.text}`} />
                               <span className="truncate text-gray-700">{event.title}</span>
                               {event.time && (
                                 <span className="text-gray-500 flex-shrink-0 ml-auto">{event.time}</span>
@@ -437,17 +496,20 @@ const Calendar = () => {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">다가오는 일정</h3>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-3 text-xs flex-wrap">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-amber-400"></div>
                   <span className="text-gray-500">견적</span>
                 </div>
-                {EVENT_CATEGORIES.slice(0, 3).map(cat => (
-                  <div key={cat.value} className="flex items-center gap-1">
-                    <div className={`w-3 h-3 rounded ${cat.color}`}></div>
-                    <span className="text-gray-500">{cat.label}</span>
-                  </div>
-                ))}
+                {allCategories.slice(0, 3).map(cat => {
+                  const colorClasses = getColorClasses(cat.color);
+                  return (
+                    <div key={cat.id} className="flex items-center gap-1">
+                      <div className={`w-3 h-3 rounded ${colorClasses.bg}`}></div>
+                      <span className="text-gray-500">{cat.name}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -486,15 +548,15 @@ const Calendar = () => {
                 
                 {allUpcomingEvents.map(event => {
                   const categoryInfo = getCategoryInfo(event.category);
-                  const IconComponent = categoryInfo.icon;
+                  const colorClasses = getColorClasses(categoryInfo.color);
                   return (
                     <div
                       key={`event-${event.id}`}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${categoryInfo.color} bg-opacity-10`}
+                      className={`flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-10`}
                       data-testid={`upcoming-event-${event.id}`}
                     >
-                      <div className={`w-10 h-10 rounded-lg ${categoryInfo.color} bg-opacity-30 flex items-center justify-center`}>
-                        <IconComponent className={`${categoryInfo.color.replace('bg-', 'text-').replace('-400', '-600')}`} />
+                      <div className={`w-10 h-10 rounded-lg ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
+                        <FaHeart className={colorClasses.text} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-800 truncate">{event.title}</p>
@@ -666,23 +728,23 @@ const Calendar = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
-              <div className="grid grid-cols-3 gap-2">
-                {EVENT_CATEGORIES.map(cat => {
-                  const IconComponent = cat.icon;
+              <div className="grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
+                {allCategories.map(cat => {
+                  const colorClasses = getColorClasses(cat.color);
                   return (
                     <button
-                      key={cat.value}
+                      key={cat.id}
                       type="button"
-                      onClick={() => setEventForm({ ...eventForm, category: cat.value })}
+                      onClick={() => setEventForm({ ...eventForm, category: cat.name })}
                       className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-colors ${
-                        eventForm.category === cat.value
-                          ? `${cat.color} bg-opacity-20 border-current`
+                        eventForm.category === cat.name
+                          ? `${colorClasses.bg} bg-opacity-20 border-current`
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
-                      data-testid={`button-category-${cat.value}`}
+                      data-testid={`button-category-${cat.name}`}
                     >
-                      <IconComponent className={`${cat.color.replace('bg-', 'text-').replace('-400', '-500')}`} />
-                      <span className="text-xs text-gray-600">{cat.label}</span>
+                      <FaHeart className={colorClasses.text} />
+                      <span className="text-xs text-gray-600 truncate max-w-full">{cat.name}</span>
                     </button>
                   );
                 })}
@@ -770,6 +832,103 @@ const Calendar = () => {
             >
               삭제
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>카테고리 관리</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">새 카테고리 추가</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="카테고리 이름"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                  data-testid="input-new-category-name"
+                />
+                <button
+                  onClick={handleAddCategory}
+                  disabled={!newCategoryName.trim()}
+                  className="btn-primary px-4 disabled:opacity-50"
+                  data-testid="button-add-category"
+                >
+                  <FaPlus />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">색상 선택</label>
+              <div className="grid grid-cols-9 gap-2">
+                {COLOR_PALETTE.map(color => (
+                  <button
+                    key={color.name}
+                    type="button"
+                    onClick={() => setNewCategoryColor(color.name)}
+                    className={`w-8 h-8 rounded-full ${color.bg} flex items-center justify-center transition-transform ${
+                      newCategoryColor === color.name ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-105'
+                    }`}
+                    data-testid={`button-color-${color.name}`}
+                  >
+                    {newCategoryColor === color.name && (
+                      <FaHeart className="text-white text-xs" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">현재 카테고리</label>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {allCategories.map(cat => {
+                  const colorClasses = getColorClasses(cat.color);
+                  const isDefault = cat.id.startsWith('default-');
+                  return (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full ${colorClasses.bg} flex items-center justify-center`}>
+                          <FaHeart className="text-white text-xs" />
+                        </div>
+                        <span className="text-sm text-gray-700">{cat.name}</span>
+                        {isDefault && (
+                          <span className="text-xs text-gray-400">(기본)</span>
+                        )}
+                      </div>
+                      {!isDefault && (
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-white"
+                          data-testid={`button-delete-category-${cat.id}`}
+                        >
+                          <FaTrash className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="btn-primary"
+                data-testid="button-close-category-modal"
+              >
+                완료
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
