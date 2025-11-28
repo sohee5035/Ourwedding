@@ -500,8 +500,8 @@ const Guests = () => {
       )}
 
       {/* 하객 리스트 */}
-      <div className="card">
-        <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="card !p-0 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 p-4 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-800">
             하객 목록 <span className="text-blush-500">({filteredGuests.length}명)</span>
           </h2>
@@ -532,76 +532,85 @@ const Guests = () => {
         {filteredGuests.length === 0 ? (
           <p className="text-gray-500 text-center py-8">조건에 맞는 하객이 없습니다</p>
         ) : (
-          <div className="space-y-2">
-            {filteredGuests.map((guest) => (
-              <div
-                key={guest.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                data-testid={`guest-row-${guest.id}`}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  guest.side === 'groom' ? 'bg-blue-100' : 'bg-pink-100'
-                }`}>
-                  <FaHeart className={`text-lg ${
-                    guest.side === 'groom' ? 'text-blue-500' : 'text-pink-500'
-                  }`} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-gray-800 truncate">{guest.name}</p>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600 text-left">
+                <tr>
+                  <th className="py-3 px-4 font-medium">이름</th>
+                  <th className="py-3 px-4 font-medium hidden md:table-cell">연락처</th>
+                  <th className="py-3 px-4 font-medium">구분</th>
+                  <th className="py-3 px-4 font-medium hidden md:table-cell">관계</th>
+                  <th className="py-3 px-4 font-medium">참석</th>
+                  <th className="py-3 px-4 font-medium w-20"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredGuests.map((guest) => (
+                  <tr 
+                    key={guest.id} 
+                    className="hover:bg-gray-50 transition-colors"
+                    data-testid={`guest-row-${guest.id}`}
+                  >
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-800">{guest.name}</span>
+                        {guest.invitationSent && (
+                          <span className="w-2 h-2 rounded-full bg-purple-400" title="청첩장 발송"></span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 md:hidden">
+                        {guest.phone || '-'}
+                      </p>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 hidden md:table-cell">
+                      {guest.phone || '-'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        guest.side === 'groom' 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : 'bg-pink-50 text-pink-600'
+                      }`}>
+                        <FaHeart className="text-[10px]" />
+                        {guest.side === 'groom' ? '신랑' : '신부'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 hidden md:table-cell">
+                      {guest.relation || '-'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         guest.attendance === 'attending'
                           ? 'bg-green-100 text-green-700'
                           : guest.attendance === 'declined'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
-                      {guest.attendance === 'attending'
-                        ? '참석'
-                        : guest.attendance === 'declined'
-                        ? '불참'
-                        : '미정'}
-                    </span>
-                    {guest.invitationSent && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">
-                        청첩장
+                      }`}>
+                        {guest.attendance === 'attending' ? '참석' : guest.attendance === 'declined' ? '불참' : '미정'}
                       </span>
-                    )}
-                    {guest.tableNumber && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">
-                        T{guest.tableNumber}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">
-                    {guest.relation && `${guest.relation}`}
-                    {guest.relation && guest.phone && ' · '}
-                    {guest.phone}
-                    {guest.memo && ` · ${guest.memo}`}
-                  </p>
-                </div>
-
-                <div className="flex gap-1 shrink-0">
-                  <button
-                    onClick={() => handleEdit(guest.id)}
-                    className="w-10 h-10 flex items-center justify-center text-blue-500 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"
-                    data-testid={`button-edit-${guest.id}`}
-                  >
-                    <FaEdit className="text-lg" />
-                  </button>
-                  <button
-                    onClick={() => deleteGuest(guest.id)}
-                    className="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors"
-                    data-testid={`button-delete-${guest.id}`}
-                  >
-                    <FaTrash className="text-lg" />
-                  </button>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleEdit(guest.id)}
+                          className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                          data-testid={`button-edit-${guest.id}`}
+                        >
+                          <FaEdit className="text-sm" />
+                        </button>
+                        <button
+                          onClick={() => deleteGuest(guest.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          data-testid={`button-delete-${guest.id}`}
+                        >
+                          <FaTrash className="text-sm" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
