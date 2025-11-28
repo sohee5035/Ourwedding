@@ -936,8 +936,8 @@ const Calendar = () => {
       </Dialog>
 
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="!w-auto !max-w-none p-4">
-          <div className="w-[184px]">
+        <DialogContent className="!w-auto !max-w-none p-5">
+          <div className="w-[222px]">
             <DialogHeader className="text-left p-0 mb-3">
               <DialogTitle className="text-base">카테고리 관리</DialogTitle>
             </DialogHeader>
@@ -966,7 +966,7 @@ const Calendar = () => {
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">색상 선택</label>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-6 gap-1.5">
                   {COLOR_PALETTE.map(color => (
                     <button
                       key={color.name}
