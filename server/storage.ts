@@ -8,7 +8,8 @@ import {
   type SharedNote, type InsertSharedNote,
   type Couple, type InsertCouple,
   type Member, type InsertMember,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members
+  type CalendarEvent, type InsertCalendarEvent,
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -76,6 +77,13 @@ export interface IStorage {
   getAllMembers(): Promise<Member[]>;
   deleteCouple(id: string): Promise<void>;
   deleteMember(id: string): Promise<void>;
+
+  // Calendar Events
+  getCalendarEventsByCoupleId(coupleId: string): Promise<CalendarEvent[]>;
+  getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
+  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  updateCalendarEvent(id: string, event: Partial<InsertCalendarEvent>): Promise<CalendarEvent>;
+  deleteCalendarEvent(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -330,6 +338,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMember(id: string): Promise<void> {
     await db.delete(members).where(eq(members.id, id));
+  }
+
+  // Calendar Events
+  async getCalendarEventsByCoupleId(coupleId: string): Promise<CalendarEvent[]> {
+    return await db.select().from(calendarEvents).where(eq(calendarEvents.coupleId, coupleId)).orderBy(calendarEvents.date);
+  }
+
+  async getCalendarEvent(id: string): Promise<CalendarEvent | undefined> {
+    const [event] = await db.select().from(calendarEvents).where(eq(calendarEvents.id, id));
+    return event || undefined;
+  }
+
+  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
+    const [created] = await db.insert(calendarEvents).values(event).returning();
+    return created;
+  }
+
+  async updateCalendarEvent(id: string, event: Partial<InsertCalendarEvent>): Promise<CalendarEvent> {
+    const [updated] = await db
+      .update(calendarEvents)
+      .set(event)
+      .where(eq(calendarEvents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<void> {
+    await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   }
 }
 
