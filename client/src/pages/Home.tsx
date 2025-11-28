@@ -105,7 +105,6 @@ const Home = () => {
           data-testid="header-card"
         >
           <div className="flex items-center gap-3">
-            <FaHeart className="text-2xl text-blush-400" />
             <div>
               <h1 className="text-base font-bold text-gray-800">
                 {groomName && brideName
@@ -114,10 +113,12 @@ const Home = () => {
                     ? `${groomName || brideName}의 결혼 준비`
                     : '우리의 결혼을 준비해요'}
               </h1>
-              {formData.weddingDate && (
+              {formData.weddingDate ? (
                 <p className="text-xs text-gray-600">
                   {format(new Date(formData.weddingDate), 'yyyy년 M월 d일', { locale: ko })}
                 </p>
+              ) : (
+                <p className="text-xs text-gray-400">여기를 눌러서 결혼식 날짜를 등록해주세요!</p>
               )}
             </div>
           </div>
