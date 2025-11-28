@@ -115,6 +115,8 @@ const Calendar = () => {
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPastEventsExpanded, setIsPastEventsExpanded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDateEventsModalOpen, setIsDateEventsModalOpen] = useState(false);
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -191,6 +193,18 @@ const Calendar = () => {
   const openViewEventModal = (event: CalendarEvent) => {
     setViewingEvent(event);
     setIsViewModalOpen(true);
+  };
+
+  const handleDateClick = (day: Date) => {
+    setSelectedDate(day);
+    setIsDateEventsModalOpen(true);
+  };
+
+  const getEventsForDate = (day: Date) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const dayEvents = events.filter(event => event.date === dateStr);
+    const dayQuotes = venueQuotes.filter(quote => quote.date === dateStr);
+    return { events: dayEvents, quotes: dayQuotes };
   };
 
   const openEditEventModal = (event: CalendarEvent) => {
@@ -451,10 +465,17 @@ const Calendar = () => {
                 return (
                   <div
                     key={day.toString()}
-                    onClick={() => !isCalendarExpanded && openAddEventModal(format(day, 'yyyy-MM-dd'))}
+                    onClick={() => {
+                      const { events: dayEvs, quotes: dayQts } = getEventsForDate(day);
+                      if (dayEvs.length > 0 || dayQts.length > 0) {
+                        handleDateClick(day);
+                      } else if (!isCalendarExpanded) {
+                        openAddEventModal(format(day, 'yyyy-MM-dd'));
+                      }
+                    }}
                     className={`${isCalendarExpanded ? 'min-h-[100px]' : 'min-h-[50px]'} bg-white border-b border-r border-gray-100 p-2 transition-colors hover:bg-gray-50 ${
                       !isSelectedMonth ? 'bg-gray-50/50' : ''
-                    } ${!isCalendarExpanded ? 'cursor-pointer' : ''}`}
+                    } cursor-pointer`}
                     data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
                   >
                     <div className="flex justify-between items-start">
@@ -478,7 +499,7 @@ const Calendar = () => {
                           return (
                             <button
                               key={quote.id}
-                              onClick={() => handleQuoteClick(quote)}
+                              onClick={(e) => { e.stopPropagation(); handleQuoteClick(quote); }}
                               className="w-full text-left text-xs px-2 py-1 rounded bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 truncate hover:from-amber-200 hover:to-amber-100 transition-colors flex items-center gap-1"
                               title={venue?.name || '웨딩홀'}
                               data-testid={`quote-event-${quote.id}`}
@@ -497,7 +518,7 @@ const Calendar = () => {
                           return (
                             <button
                               key={event.id}
-                              onClick={() => openViewEventModal(event)}
+                              onClick={(e) => { e.stopPropagation(); openViewEventModal(event); }}
                               className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bgLight} hover:opacity-80 transition-colors`}
                               title={event.title}
                               data-testid={`calendar-event-${event.id}`}
@@ -1075,6 +1096,91 @@ const Calendar = () => {
                       <FaTrash /> 삭제
                     </button>
                   </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDateEventsModalOpen} onOpenChange={setIsDateEventsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          {selectedDate && (() => {
+            const { events: dayEvents, quotes: dayQuotes } = getEventsForDate(selectedDate);
+            const totalCount = dayEvents.length + dayQuotes.length;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-lg">
+                    {format(selectedDate, 'M월 d일 (EEE)', { locale: ko })} 일정
+                  </DialogTitle>
+                  <p className="text-sm text-gray-500">{totalCount}개의 일정이 있습니다</p>
+                </DialogHeader>
+                <div className="space-y-2 py-4 max-h-[400px] overflow-y-auto">
+                  {dayQuotes.map(quote => {
+                    const venue = getVenueById(quote.venueId);
+                    return (
+                      <button
+                        key={`quote-${quote.id}`}
+                        onClick={() => {
+                          setIsDateEventsModalOpen(false);
+                          handleQuoteClick(quote);
+                        }}
+                        className="w-full flex items-center gap-3 p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors text-left"
+                        data-testid={`date-modal-quote-${quote.id}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center shrink-0">
+                          <FaBuilding className="text-amber-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 truncate">{venue?.name || '웨딩홀 견적'}</p>
+                          <p className="text-sm text-gray-500">
+                            {quote.time || '시간 미정'}
+                          </p>
+                        </div>
+                        <div className="text-amber-600 font-semibold text-sm shrink-0">
+                          {((quote.estimate || 0) / 10000).toLocaleString()}만원
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {dayEvents.map(event => {
+                    const categoryInfo = getCategoryInfo(event.category);
+                    const colorClasses = getColorClasses(categoryInfo.color);
+                    return (
+                      <button
+                        key={`event-${event.id}`}
+                        onClick={() => {
+                          setIsDateEventsModalOpen(false);
+                          openViewEventModal(event);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 ${colorClasses.bgLight} rounded-xl hover:opacity-80 transition-colors text-left`}
+                        data-testid={`date-modal-event-${event.id}`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg ${colorClasses.bg} bg-opacity-30 flex items-center justify-center shrink-0`}>
+                          <FaHeart className={colorClasses.text} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 truncate">{event.title}</p>
+                          <p className="text-sm text-gray-500">
+                            {event.time || '시간 미정'} · {event.category}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 pt-2 border-t">
+                  <button
+                    onClick={() => {
+                      setIsDateEventsModalOpen(false);
+                      openAddEventModal(format(selectedDate, 'yyyy-MM-dd'));
+                    }}
+                    className="flex-1 py-3 px-4 bg-blush-400 text-white rounded-xl font-medium hover:bg-blush-500 transition-colors flex items-center justify-center gap-2"
+                    data-testid="button-add-event-from-date"
+                  >
+                    <FaPlus /> 일정 추가
+                  </button>
                 </div>
               </>
             );
