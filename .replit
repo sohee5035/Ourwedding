@@ -63,4 +63,4 @@ integrations = ["javascript_database:1.0.0"]
 
 [userenv.shared]
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "wedding2024!"
+ADMIN_PASSWORD = "1122"
