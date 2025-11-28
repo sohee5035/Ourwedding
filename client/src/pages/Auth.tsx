@@ -9,6 +9,7 @@ const Auth = () => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [role, setRole] = useState<'bride' | 'groom'>('bride');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -19,7 +20,7 @@ const Auth = () => {
     setError('');
     setIsSubmitting(true);
     
-    const result = await register(name, pin);
+    const result = await register(name, pin, role);
     if (!result.success) {
       setError(result.error || '가입에 실패했습니다');
     }
@@ -54,6 +55,7 @@ const Auth = () => {
     setName('');
     setPin('');
     setInviteCode('');
+    setRole('bride');
     setError('');
   };
 
@@ -118,6 +120,38 @@ const Auth = () => {
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
+            <div>
+              <label className="label">나는 누구인가요?</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('groom')}
+                  className={`py-4 rounded-xl border-2 transition-all ${
+                    role === 'groom'
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                  data-testid="button-role-groom"
+                >
+                  <span className="text-2xl block mb-1">🤵</span>
+                  <span className="font-medium">예비 신랑</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('bride')}
+                  className={`py-4 rounded-xl border-2 transition-all ${
+                    role === 'bride'
+                      ? 'border-pink-400 bg-pink-50 text-pink-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                  data-testid="button-role-bride"
+                >
+                  <span className="text-2xl block mb-1">👰</span>
+                  <span className="font-medium">예비 신부</span>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="label">이름 (실명)</label>
               <input

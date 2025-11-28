@@ -4,6 +4,7 @@ interface Member {
   id: string;
   name: string;
   coupleId: string | null;
+  role: 'bride' | 'groom';
 }
 
 interface Couple {
@@ -14,6 +15,7 @@ interface Couple {
 interface Partner {
   id: string;
   name: string;
+  role: 'bride' | 'groom';
 }
 
 interface AuthState {
@@ -24,7 +26,7 @@ interface AuthState {
   isAuthenticated: boolean;
   
   checkAuth: () => Promise<void>;
-  register: (name: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, pin: string, role: 'bride' | 'groom') => Promise<{ success: boolean; error?: string }>;
   join: (name: string, pin: string, inviteCode: string) => Promise<{ success: boolean; error?: string }>;
   login: (name: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -58,13 +60,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (name: string, pin: string) => {
+  register: async (name: string, pin: string, role: 'bride' | 'groom') => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, pin }),
+        body: JSON.stringify({ name, pin, role }),
       });
       
       if (response.ok) {
