@@ -936,11 +936,11 @@ const Calendar = () => {
       </Dialog>
 
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="max-w-[280px]">
-          <DialogHeader>
+        <DialogContent className="w-[220px] p-4">
+          <DialogHeader className="text-left">
             <DialogTitle className="text-base">카테고리 관리</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-gray-700">새 카테고리 추가</label>
               <div className="flex gap-1.5">
@@ -949,29 +949,29 @@ const Calendar = () => {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="카테고리 이름"
-                  className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                  className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
                   data-testid="input-new-category-name"
                 />
                 <button
                   onClick={handleAddCategory}
                   disabled={!newCategoryName.trim()}
-                  className="btn-primary px-3 py-1.5 disabled:opacity-50"
+                  className="btn-primary px-2 py-1.5 disabled:opacity-50 shrink-0"
                   data-testid="button-add-category"
                 >
-                  <FaPlus className="text-sm" />
+                  <FaPlus className="text-xs" />
                 </button>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">색상 선택</label>
-              <div className="grid grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
                 {COLOR_PALETTE.map(color => (
                   <button
                     key={color.name}
                     type="button"
                     onClick={() => setNewCategoryColor(color.name)}
-                    className={`w-7 h-7 rounded-full ${color.bg} flex items-center justify-center transition-transform ${
+                    className={`w-8 h-8 rounded-full ${color.bg} flex items-center justify-center transition-transform ${
                       newCategoryColor === color.name ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : 'hover:scale-105'
                     }`}
                     data-testid={`button-color-${color.name}`}
@@ -986,28 +986,28 @@ const Calendar = () => {
 
             <div className="border-t pt-3">
               <label className="block text-xs font-medium text-gray-700 mb-1.5">현재 카테고리</label>
-              <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+              <div className="space-y-1 max-h-[140px] overflow-y-auto">
                 {allCategories.map(cat => {
                   const colorClasses = getColorClasses(cat.color);
                   const isDefault = cat.id.startsWith('default-');
                   return (
                     <div
                       key={cat.id}
-                      className="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg min-w-0 gap-1"
                     >
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-5 h-5 rounded-full ${colorClasses.bg} flex items-center justify-center`}>
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div className={`w-5 h-5 rounded-full ${colorClasses.bg} flex items-center justify-center shrink-0`}>
                           <FaHeart className="text-white text-[8px]" />
                         </div>
-                        <span className="text-xs text-gray-700">{cat.name}</span>
+                        <span className="text-xs text-gray-700 truncate">{cat.name}</span>
                         {isDefault && (
-                          <span className="text-[10px] text-gray-400">(기본)</span>
+                          <span className="text-[10px] text-gray-400 shrink-0">(기본)</span>
                         )}
                       </div>
                       {!isDefault && (
                         <button
                           onClick={() => handleDeleteCategory(cat.id)}
-                          className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-white"
+                          className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-white shrink-0"
                           data-testid={`button-delete-category-${cat.id}`}
                         >
                           <FaTrash className="text-[10px]" />
@@ -1019,7 +1019,7 @@ const Calendar = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-end">
               <button
                 onClick={() => setIsCategoryModalOpen(false)}
                 className="btn-primary text-sm px-4 py-1.5"
