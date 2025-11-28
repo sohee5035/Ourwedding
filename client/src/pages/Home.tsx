@@ -13,11 +13,24 @@ const Home = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    groomName: weddingInfo.groomName || '',
-    brideName: weddingInfo.brideName || '',
     weddingDate: weddingInfo.weddingDate || '',
     totalBudget: weddingInfo.totalBudget || 0,
   });
+
+  const getGroomName = () => {
+    if (member?.role === 'groom') return member.name;
+    if (partner?.role === 'groom') return partner.name;
+    return '';
+  };
+
+  const getBrideName = () => {
+    if (member?.role === 'bride') return member.name;
+    if (partner?.role === 'bride') return partner.name;
+    return '';
+  };
+
+  const groomName = getGroomName();
+  const brideName = getBrideName();
   
   const [noteContent, setNoteContent] = useState('');
   const [copied, setCopied] = useState(false);
@@ -30,12 +43,10 @@ const Home = () => {
 
   useEffect(() => {
     setFormData({
-      groomName: weddingInfo.groomName || '',
-      brideName: weddingInfo.brideName || '',
       weddingDate: weddingInfo.weddingDate || '',
       totalBudget: weddingInfo.totalBudget || 0,
     });
-  }, [weddingInfo.groomName, weddingInfo.brideName, weddingInfo.weddingDate, weddingInfo.totalBudget]);
+  }, [weddingInfo.weddingDate, weddingInfo.totalBudget]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,9 +108,11 @@ const Home = () => {
             <FaHeart className="text-2xl text-blush-400" />
             <div>
               <h1 className="text-base font-bold text-gray-800">
-                {formData.groomName && formData.brideName
-                  ? `${formData.groomName} ❤️ ${formData.brideName}`
-                  : '우리의 결혼을 준비해요'}
+                {groomName && brideName
+                  ? `${groomName} ❤️ ${brideName}`
+                  : groomName || brideName
+                    ? `${groomName || brideName}의 결혼 준비`
+                    : '우리의 결혼을 준비해요'}
               </h1>
               {formData.weddingDate && (
                 <p className="text-xs text-gray-600">
@@ -117,29 +130,17 @@ const Home = () => {
       ) : (
         <div className="card mb-4 bg-gradient-to-r from-blush-100 to-lavender-100 border-none">
           <div className="space-y-4 max-w-md mx-auto">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label text-sm">신랑 이름</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.groomName}
-                  onChange={(e) => setFormData({ ...formData, groomName: e.target.value })}
-                  placeholder="신랑"
-                  data-testid="input-groom-name"
-                />
-              </div>
-              <div>
-                <label className="label text-sm">신부 이름</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.brideName}
-                  onChange={(e) => setFormData({ ...formData, brideName: e.target.value })}
-                  placeholder="신부"
-                  data-testid="input-bride-name"
-                />
-              </div>
+            <div className="text-center mb-2">
+              <h2 className="text-lg font-bold text-gray-800">
+                {groomName && brideName
+                  ? `${groomName} ❤️ ${brideName}`
+                  : groomName || brideName
+                    ? `${groomName || brideName}의 결혼 준비`
+                    : '우리의 결혼을 준비해요'}
+              </h2>
+              {!partner && (
+                <p className="text-xs text-gray-500 mt-1">상대방이 합류하면 이름이 표시됩니다</p>
+              )}
             </div>
 
             <div>
