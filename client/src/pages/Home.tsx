@@ -218,7 +218,7 @@ const Home = () => {
                     : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
                 }`}
               >
-                <p className={`text-sm leading-relaxed ${isMyNote(note.author) ? 'text-white' : 'text-gray-800'}`}>
+                <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isMyNote(note.author) ? 'text-white' : 'text-gray-800'}`}>
                   {note.content}
                 </p>
                 <div className="flex items-center justify-between mt-2 gap-2">
@@ -242,18 +242,26 @@ const Home = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmitNote} className="flex gap-2 mt-auto">
-        <input
-          type="text"
-          className="input-field flex-1"
+      <form onSubmit={handleSubmitNote} className="flex gap-2 mt-auto items-end">
+        <textarea
+          className="input-field flex-1 resize-none min-h-[44px] max-h-[120px]"
           value={noteContent}
           onChange={(e) => setNoteContent(e.target.value)}
-          placeholder="메모를 입력하세요..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (noteContent.trim()) {
+                handleSubmitNote(e);
+              }
+            }
+          }}
+          placeholder="메모를 입력하세요... (Shift+Enter로 줄바꿈)"
+          rows={1}
           data-testid="input-note-content"
         />
         <button
           type="submit"
-          className="btn-primary px-4"
+          className="btn-primary px-4 h-[44px]"
           disabled={!noteContent.trim()}
           data-testid="button-send-note"
         >
