@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createHash } from "crypto";
 import { z } from "zod";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 import { 
   insertWeddingInfoSchema, 
   insertVenueSchema, 
@@ -14,6 +16,8 @@ import {
   insertCalendarEventSchema,
   insertEventCategorySchema
 } from "@shared/schema";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
@@ -92,6 +96,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete venue" });
+    }
+  });
+
+  // Image Upload (Cloudinary)
+  app.post("/api/upload", upload.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const result = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            resource_type: "image",
+            folder: "wedding-venues",
+            transformation: [
+              { width: 1200, height: 800, crop: "limit" },
+              { quality: "auto:good" },
+              { fetch_format: "auto" }
+            ]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(req.file!.buffer);
+      });
+
+      res.json({
+        url: result.secure_url,
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
+  app.delete("/api/upload/:publicId", async (req, res) => {
+    try {
+      const publicId = decodeURIComponent(req.params.publicId);
+      await cloudinary.uploader.destroy(publicId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete error:", error);
+      res.status(500).json({ error: "Failed to delete image" });
     }
   });
 
