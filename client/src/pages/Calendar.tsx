@@ -110,6 +110,8 @@ const Calendar = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('pink');
+  const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -183,7 +185,14 @@ const Calendar = () => {
     setIsEventModalOpen(true);
   };
 
+  const openViewEventModal = (event: CalendarEvent) => {
+    setViewingEvent(event);
+    setIsViewModalOpen(true);
+  };
+
   const openEditEventModal = (event: CalendarEvent) => {
+    setIsViewModalOpen(false);
+    setViewingEvent(null);
     setEditingEvent(event);
     setEventForm({
       title: event.title,
@@ -453,7 +462,7 @@ const Calendar = () => {
                           return (
                             <button
                               key={event.id}
-                              onClick={() => openEditEventModal(event)}
+                              onClick={() => openViewEventModal(event)}
                               className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bg} bg-opacity-20 hover:bg-opacity-30 transition-colors`}
                               title={event.title}
                               data-testid={`calendar-event-${event.id}`}
@@ -550,9 +559,10 @@ const Calendar = () => {
                   const categoryInfo = getCategoryInfo(event.category);
                   const colorClasses = getColorClasses(categoryInfo.color);
                   return (
-                    <div
+                    <button
                       key={`event-${event.id}`}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-10`}
+                      onClick={() => openViewEventModal(event)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-10 hover:bg-opacity-20 transition-colors text-left`}
                       data-testid={`upcoming-event-${event.id}`}
                     >
                       <div className={`w-10 h-10 rounded-lg ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
@@ -565,23 +575,7 @@ const Calendar = () => {
                           {event.time && ` ${event.time}`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEditEventModal(event)}
-                          className="p-2 text-gray-400 hover:text-blush-500 rounded-full hover:bg-white/50"
-                          data-testid={`button-edit-event-${event.id}`}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => confirmDeleteEvent(event)}
-                          className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-white/50"
-                          data-testid={`button-delete-event-${event.id}`}
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -930,6 +924,71 @@ const Calendar = () => {
               </button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          {viewingEvent && (() => {
+            const categoryInfo = getCategoryInfo(viewingEvent.category);
+            const colorClasses = getColorClasses(categoryInfo.color);
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
+                      <FaHeart className={`text-xl ${colorClasses.text}`} />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl">{viewingEvent.title}</DialogTitle>
+                      <p className={`text-sm ${colorClasses.text}`}>{viewingEvent.category}</p>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className={`${colorClasses.bg} bg-opacity-10 rounded-xl p-4`}>
+                    <div className="flex items-center gap-2 text-gray-600 mb-2">
+                      <FaCalendarAlt className={colorClasses.text} />
+                      <span className="font-medium">일정</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-800">
+                      {format(parseISO(viewingEvent.date), 'yyyy년 M월 d일 (EEE)', { locale: ko })}
+                      {viewingEvent.time && (
+                        <span className="ml-2 font-normal text-gray-600">{viewingEvent.time}</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {viewingEvent.memo && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">메모</p>
+                      <p className="text-gray-700 whitespace-pre-wrap">{viewingEvent.memo}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2 border-t">
+                    <button
+                      onClick={() => openEditEventModal(viewingEvent)}
+                      className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                      data-testid="button-view-edit"
+                    >
+                      <FaEdit /> 수정
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsViewModalOpen(false);
+                        confirmDeleteEvent(viewingEvent);
+                      }}
+                      className="flex-1 py-2 px-4 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                      data-testid="button-view-delete"
+                    >
+                      <FaTrash /> 삭제
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
