@@ -341,20 +341,20 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">일정 캘린더</h1>
           <p className="text-gray-600 text-sm">결혼 준비 주요 일정을 확인하세요</p>
         </div>
         
-        <div className="flex gap-1.5 items-center">
+        <div className="flex gap-2 items-center">
           <button
             onClick={() => setIsCategoryModalOpen(true)}
-            className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
+            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
             data-testid="button-manage-categories"
             title="카테고리"
           >
-            <FaCog className="text-sm" />
+            <FaCog className="text-base" />
           </button>
           <button
             onClick={() => openAddEventModal()}
@@ -362,12 +362,12 @@ const Calendar = () => {
             data-testid="button-add-event"
             title="일정 추가"
           >
-            <FaPlus className="text-sm" />
+            <FaPlus className="text-base" />
           </button>
           <div className="flex bg-gray-100 p-0.5 rounded-full">
             <button
               onClick={() => setViewMode('calendar')}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                 viewMode === 'calendar' 
                   ? 'bg-white text-blush-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-700'
@@ -375,11 +375,11 @@ const Calendar = () => {
               data-testid="button-calendar-view"
               title="달력"
             >
-              <FaCalendarAlt className="text-sm" />
+              <FaCalendarAlt className="text-base" />
             </button>
             <button
               onClick={() => setViewMode('timetable')}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                 viewMode === 'timetable' 
                   ? 'bg-white text-blush-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-700'
@@ -387,7 +387,7 @@ const Calendar = () => {
               data-testid="button-timetable-view"
               title="타임테이블"
             >
-              <FaList className="text-sm" />
+              <FaList className="text-base" />
             </button>
           </div>
         </div>
