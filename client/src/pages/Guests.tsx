@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGuestStore } from '../store/guestStore';
+import { useAuthStore } from '../store/authStore';
 import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable } from 'react-icons/fa';
 import type { Guest } from '../types';
 
@@ -12,14 +13,11 @@ interface BulkGuestRow {
 const Guests = () => {
   const { guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount, fetchGuests } =
     useGuestStore();
+  const { member } = useAuthStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchGuests();
-  }, [fetchGuests]);
 
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
@@ -35,6 +33,20 @@ const Guests = () => {
   });
 
   const [bulkSide, setBulkSide] = useState<'groom' | 'bride'>('groom');
+
+  const defaultSide = member?.role === 'bride' ? 'bride' : 'groom';
+
+  useEffect(() => {
+    fetchGuests();
+  }, [fetchGuests]);
+
+  useEffect(() => {
+    if (member?.role) {
+      const side = member.role === 'bride' ? 'bride' : 'groom';
+      setFormData(prev => ({ ...prev, side }));
+      setBulkSide(side);
+    }
+  }, [member?.role]);
   const [bulkRows, setBulkRows] = useState<BulkGuestRow[]>([
     { name: '', phone: '', relation: '' },
     { name: '', phone: '', relation: '' },
@@ -80,7 +92,7 @@ const Guests = () => {
     setFormData({
       name: '',
       phone: '',
-      side: 'groom',
+      side: defaultSide,
       relation: '',
       invitationSent: false,
       attendance: 'pending',
