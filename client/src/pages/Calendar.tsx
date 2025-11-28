@@ -929,17 +929,17 @@ const Calendar = () => {
               "{eventToDelete?.title}" 일정을<br />삭제하시겠습니까?
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => setIsDeleteConfirmOpen(false)}
-              className="btn-secondary flex-1"
+              className="flex-1 py-3 px-6 border border-gray-200 text-gray-600 rounded-full font-medium hover:bg-gray-50 transition-colors"
               data-testid="button-cancel-delete"
             >
               취소
             </button>
             <button
               onClick={handleDeleteEvent}
-              className="flex-1 py-2 px-4 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors"
+              className="flex-1 py-3 px-6 bg-red-100 text-red-500 rounded-full font-medium hover:bg-red-200 transition-colors"
               data-testid="button-confirm-delete"
             >
               삭제
