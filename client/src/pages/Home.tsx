@@ -19,6 +19,7 @@ const Home = () => {
   
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteContent, setEditingNoteContent] = useState('');
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   const getGroomName = () => {
     if (member?.role === 'groom') return member.name;
@@ -98,6 +99,12 @@ const Home = () => {
     await updateNote(editingNoteId, editingNoteContent.trim());
     setEditingNoteId(null);
     setEditingNoteContent('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingNoteId) return;
+    await deleteNote(deletingNoteId);
+    setDeletingNoteId(null);
   };
 
   const isMyNote = (author: string) => {
@@ -271,7 +278,7 @@ const Home = () => {
                           <FaPen className="text-xs" />
                         </button>
                         <button
-                          onClick={() => deleteNote(note.id)}
+                          onClick={() => setDeletingNoteId(note.id)}
                           className="text-gray-400 hover:text-red-500 transition-colors"
                           data-testid={`button-delete-note-${note.id}`}
                         >
@@ -314,6 +321,31 @@ const Home = () => {
           <FaPaperPlane />
         </button>
       </form>
+
+      {deletingNoteId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">메모 삭제</h3>
+            <p className="text-gray-600 mb-6">이 메모를 삭제하시겠어요?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingNoteId(null)}
+                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                data-testid="button-cancel-delete"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+                data-testid="button-confirm-delete"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
