@@ -157,74 +157,57 @@ const Guests = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex justify-between items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">하객 관리</h1>
-          <p className="text-gray-600 mt-1">총 {guests.length}명 (참석: {attendingCount}명)</p>
+          <p className="text-sm text-gray-500 mt-1">총 {guests.length}명 (참석: {attendingCount}명)</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => {
               setShowBulkForm(true);
               setShowAddForm(false);
             }}
-            className="btn-secondary flex items-center gap-2"
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
             data-testid="button-bulk-add"
+            title="대량 추가"
           >
-            <FaTable /> 대량 추가
+            <FaTable />
           </button>
           <button
             onClick={() => {
               setShowAddForm(true);
               setShowBulkForm(false);
             }}
-            className="btn-primary flex items-center gap-2"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-blush-400 text-white hover:bg-blush-500 transition-colors"
             data-testid="button-add-guest"
+            title="하객 추가"
           >
-            <FaPlus /> 하객 추가
+            <FaPlus />
           </button>
         </div>
       </div>
 
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="card bg-blue-50 !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <FaHeart className="text-xl text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-xs text-gray-600">신랑측</h3>
-              <p className="text-xl font-bold text-blue-600">{groomGuests.length}명</p>
-            </div>
-          </div>
+      {/* 통계 - 인라인 뱃지 스타일 */}
+      <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-full">
+          <FaHeart className="text-blue-500 text-sm" />
+          <span className="text-sm text-gray-600">신랑측</span>
+          <span className="font-bold text-blue-600">{groomGuests.length}</span>
         </div>
-
-        <div className="card bg-pink-50 !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
-              <FaHeart className="text-xl text-pink-500" />
-            </div>
-            <div>
-              <h3 className="text-xs text-gray-600">신부측</h3>
-              <p className="text-xl font-bold text-pink-600">{brideGuests.length}명</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 px-3 py-2 bg-pink-50 rounded-full">
+          <FaHeart className="text-pink-500 text-sm" />
+          <span className="text-sm text-gray-600">신부측</span>
+          <span className="font-bold text-pink-600">{brideGuests.length}</span>
         </div>
-
-        <div className="card bg-green-50 !p-4">
-          <h3 className="text-xs text-gray-600 mb-1">참석</h3>
-          <p className="text-xl font-bold text-green-600">
-            {guests.filter((g) => g.attendance === 'attending').length}명
-          </p>
+        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-full">
+          <span className="text-sm text-gray-600">참석</span>
+          <span className="font-bold text-green-600">{guests.filter((g) => g.attendance === 'attending').length}</span>
         </div>
-
-        <div className="card bg-yellow-50 !p-4">
-          <h3 className="text-xs text-gray-600 mb-1">미정</h3>
-          <p className="text-xl font-bold text-yellow-600">
-            {guests.filter((g) => g.attendance === 'pending').length}명
-          </p>
+        <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-full">
+          <span className="text-sm text-gray-600">미정</span>
+          <span className="font-bold text-yellow-600">{guests.filter((g) => g.attendance === 'pending').length}</span>
         </div>
       </div>
 
@@ -516,13 +499,15 @@ const Guests = () => {
         </div>
       )}
 
-      {/* 필터 */}
-      <div className="card !p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-[120px]">
-            <label className="label text-xs">구분</label>
+      {/* 하객 리스트 */}
+      <div className="card">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="text-base font-bold text-gray-800">
+            하객 목록 <span className="text-blush-500">({filteredGuests.length}명)</span>
+          </h2>
+          <div className="flex gap-2">
             <select
-              className="input-field !py-2 text-sm"
+              className="text-sm text-gray-600 bg-gray-100 border-0 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blush-200"
               value={filterSide}
               onChange={(e) => setFilterSide(e.target.value as any)}
               data-testid="filter-side"
@@ -531,12 +516,8 @@ const Guests = () => {
               <option value="groom">신랑측</option>
               <option value="bride">신부측</option>
             </select>
-          </div>
-
-          <div className="flex-1 min-w-[120px]">
-            <label className="label text-xs">참석</label>
             <select
-              className="input-field !py-2 text-sm"
+              className="text-sm text-gray-600 bg-gray-100 border-0 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blush-200"
               value={filterAttendance}
               onChange={(e) => setFilterAttendance(e.target.value as any)}
               data-testid="filter-attendance"
@@ -548,13 +529,6 @@ const Guests = () => {
             </select>
           </div>
         </div>
-      </div>
-
-      {/* 하객 리스트 */}
-      <div className="card">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">
-          하객 목록 ({filteredGuests.length}명)
-        </h2>
         {filteredGuests.length === 0 ? (
           <p className="text-gray-500 text-center py-8">조건에 맞는 하객이 없습니다</p>
         ) : (
