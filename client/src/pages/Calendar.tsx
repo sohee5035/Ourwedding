@@ -16,6 +16,8 @@ import {
   subMonths,
   parseISO,
   isAfter,
+  isBefore,
+  startOfDay,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { 
@@ -112,6 +114,7 @@ const Calendar = () => {
   const [newCategoryColor, setNewCategoryColor] = useState('pink');
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isPastEventsExpanded, setIsPastEventsExpanded] = useState(false);
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -304,6 +307,34 @@ const Calendar = () => {
     .sort((a, b) => {
       if (a.date && b.date) {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      return 0;
+    });
+
+  const todayDate = startOfDay(new Date());
+  
+  const allPastEvents = [...events]
+    .filter(e => {
+      if (!e.date) return false;
+      const eventDate = parseISO(e.date);
+      return isBefore(eventDate, todayDate);
+    })
+    .sort((a, b) => {
+      if (a.date && b.date) {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      return 0;
+    });
+
+  const allPastQuotes = [...datedQuotes]
+    .filter(q => {
+      if (!q.date) return false;
+      const quoteDate = parseISO(q.date);
+      return isBefore(quoteDate, todayDate);
+    })
+    .sort((a, b) => {
+      if (a.date && b.date) {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
       return 0;
     });
@@ -581,6 +612,76 @@ const Calendar = () => {
               </div>
             )}
           </div>
+
+          {(allPastEvents.length > 0 || allPastQuotes.length > 0) && (
+            <div className="card">
+              <button
+                onClick={() => setIsPastEventsExpanded(!isPastEventsExpanded)}
+                className="w-full flex items-center justify-between"
+                data-testid="button-toggle-past-events"
+              >
+                <h3 className="text-lg font-bold text-gray-600">지난 일정</h3>
+                <div className="flex items-center gap-2 text-gray-400">
+                  <span className="text-sm">{allPastEvents.length + allPastQuotes.length}건</span>
+                  {isPastEventsExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                </div>
+              </button>
+
+              {isPastEventsExpanded && (
+                <div className="space-y-3 mt-4 pt-4 border-t">
+                  {allPastQuotes.map(quote => {
+                    const venue = getVenueById(quote.venueId);
+                    return (
+                      <button
+                        key={`past-quote-${quote.id}`}
+                        onClick={() => handleQuoteClick(quote)}
+                        className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left opacity-70"
+                        data-testid={`past-quote-${quote.id}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                          <FaBuilding className="text-gray-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-600 truncate">{venue?.name || '웨딩홀 견적'}</p>
+                          <p className="text-sm text-gray-400">
+                            {quote.date ? format(parseISO(quote.date), 'M월 d일 (EEE)', { locale: ko }) : '날짜 미정'}
+                            {quote.time && ` ${quote.time}`}
+                          </p>
+                        </div>
+                        <div className="text-gray-500 font-semibold text-sm">
+                          {((quote.estimate || 0) / 10000).toLocaleString()}만원
+                        </div>
+                      </button>
+                    );
+                  })}
+                  
+                  {allPastEvents.map(event => {
+                    const categoryInfo = getCategoryInfo(event.category);
+                    const colorClasses = getColorClasses(categoryInfo.color);
+                    return (
+                      <button
+                        key={`past-event-${event.id}`}
+                        onClick={() => openViewEventModal(event)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left opacity-70"
+                        data-testid={`past-event-${event.id}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                          <FaHeart className={colorClasses.text} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-600 truncate">{event.title}</p>
+                          <p className="text-sm text-gray-400">
+                            {format(parseISO(event.date), 'M월 d일 (EEE)', { locale: ko })}
+                            {event.time && ` ${event.time}`}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="card flex flex-col items-center justify-center py-16">
