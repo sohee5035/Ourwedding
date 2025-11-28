@@ -125,63 +125,56 @@ const Venues = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">웨딩홀 리스트</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl font-bold text-gray-800">웨딩홀 리스트</h1>
+          <p className="text-sm text-gray-500 mt-1">
             총 {venues.length}개 웨딩홀, {venueQuotes.length}개 견적
           </p>
         </div>
-        <Link to="/venues/add" className="btn-primary flex items-center gap-2" data-testid="add-venue-button">
+        <Link to="/venues/add" className="btn-primary flex items-center gap-2 shrink-0" data-testid="add-venue-button">
           <FaPlus /> 웨딩홀 추가
         </Link>
       </div>
 
-      <div className="card">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="flex bg-gray-100 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-white text-blush-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                data-testid="view-mode-list"
-              >
-                <FaList /> 목록
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  viewMode === 'map'
-                    ? 'bg-white text-blush-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                data-testid="view-mode-map"
-              >
-                <FaMap /> 지도
-              </button>
-            </div>
-          </div>
-          {viewMode === 'list' && (
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">정렬:</label>
-              <select
-                className="input-field max-w-xs"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                data-testid="sort-select"
-              >
-                <option value="recent">최근 등록순</option>
-                <option value="name">이름순</option>
-                <option value="quotes">견적 많은순</option>
-              </select>
-            </div>
-          )}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex bg-gray-100 rounded-full p-1">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              viewMode === 'list'
+                ? 'bg-white text-blush-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            data-testid="view-mode-list"
+          >
+            <FaList className="text-xs" /> 목록
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              viewMode === 'map'
+                ? 'bg-white text-blush-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            data-testid="view-mode-map"
+          >
+            <FaMap className="text-xs" /> 지도
+          </button>
         </div>
+        {viewMode === 'list' && (
+          <select
+            className="text-sm text-gray-600 bg-transparent border-0 focus:ring-0 pr-6 cursor-pointer"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            data-testid="sort-select"
+          >
+            <option value="recent">최근 등록순</option>
+            <option value="name">이름순</option>
+            <option value="quotes">견적 많은순</option>
+          </select>
+        )}
       </div>
 
       {venues.length === 0 ? (
@@ -192,44 +185,48 @@ const Venues = () => {
           </Link>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {sortedVenues.map((venue) => {
             const isExpanded = expandedVenues.has(venue.id);
+            const lowestQuote = getLowestEstimate(venue.id);
             
             return (
-              <div key={venue.id} className="card" data-testid={`venue-card-${venue.id}`}>
+              <div key={venue.id} className="card !p-4" data-testid={`venue-card-${venue.id}`}>
                 <div
-                  className="flex items-center justify-between cursor-pointer"
+                  className="flex items-center gap-3 cursor-pointer"
                   onClick={() => toggleVenue(venue.id)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <FaMapMarkerAlt className="text-blush-500 text-xl" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <FaMapMarkerAlt className="text-blush-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-gray-800 truncate">{venue.name}</h3>
+                      <span className="text-xs text-blush-500 bg-blush-50 px-2 py-0.5 rounded-full shrink-0">
+                        {venue.quotes.length}개
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800">{venue.name}</h3>
-                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
-                        <span className="flex items-center gap-1">
-                          <FaMapMarkerAlt className="text-xs" />
-                          {venue.address}
-                        </span>
-                        {venue.nearestStation && (
-                          <span className="flex items-center gap-1">
-                            <FaSubway className="text-blue-500 text-xs" />
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                      <span className="truncate">{venue.address}</span>
+                      {venue.nearestStation && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="flex items-center gap-0.5 shrink-0">
+                            <FaSubway className="text-blue-500" />
                             {venue.nearestStation}
                           </span>
-                        )}
-                      </div>
+                        </>
+                      )}
                     </div>
+                    {lowestQuote && (
+                      <p className="text-sm font-semibold text-blush-600 mt-1">
+                        {(lowestQuote / 10000).toLocaleString()}만원~
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                      견적 {venue.quotes.length}개
-                    </span>
-                    <span className="p-2 text-gray-400">
-                      {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                    </span>
-                  </div>
+                  <span className="p-1 text-gray-400 shrink-0">
+                    {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                  </span>
                 </div>
 
                 {isExpanded && (
