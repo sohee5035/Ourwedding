@@ -11,7 +11,8 @@ import {
   insertBudgetItemSchema,
   insertGuestSchema,
   insertSharedNoteSchema,
-  insertCalendarEventSchema
+  insertCalendarEventSchema,
+  insertEventCategorySchema
 } from "@shared/schema";
 
 function hashPin(pin: string): string {
@@ -620,6 +621,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "일정 삭제에 실패했습니다" });
+    }
+  });
+
+  // Event Categories
+  app.get("/api/event-categories", async (req, res) => {
+    try {
+      if (!req.session.coupleId) {
+        return res.status(401).json({ error: "로그인이 필요합니다" });
+      }
+      const categories = await storage.getEventCategoriesByCoupleId(req.session.coupleId);
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "카테고리를 가져오는데 실패했습니다" });
+    }
+  });
+
+  app.post("/api/event-categories", async (req, res) => {
+    try {
+      if (!req.session.coupleId) {
+        return res.status(401).json({ error: "로그인이 필요합니다" });
+      }
+      const parsed = insertEventCategorySchema.parse({
+        ...req.body,
+        coupleId: req.session.coupleId,
+      });
+      const category = await storage.createEventCategory(parsed);
+      res.status(201).json(category);
+    } catch (error) {
+      res.status(400).json({ error: "카테고리 생성에 실패했습니다" });
+    }
+  });
+
+  app.delete("/api/event-categories/:id", async (req, res) => {
+    try {
+      await storage.deleteEventCategory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "카테고리 삭제에 실패했습니다" });
     }
   });
 

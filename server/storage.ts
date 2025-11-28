@@ -9,7 +9,8 @@ import {
   type Couple, type InsertCouple,
   type Member, type InsertMember,
   type CalendarEvent, type InsertCalendarEvent,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents
+  type EventCategory, type InsertEventCategory,
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents, eventCategories
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -84,6 +85,11 @@ export interface IStorage {
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   updateCalendarEvent(id: string, event: Partial<InsertCalendarEvent>): Promise<CalendarEvent>;
   deleteCalendarEvent(id: string): Promise<void>;
+
+  // Event Categories
+  getEventCategoriesByCoupleId(coupleId: string): Promise<EventCategory[]>;
+  createEventCategory(category: InsertEventCategory): Promise<EventCategory>;
+  deleteEventCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -366,6 +372,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCalendarEvent(id: string): Promise<void> {
     await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
+  }
+
+  // Event Categories
+  async getEventCategoriesByCoupleId(coupleId: string): Promise<EventCategory[]> {
+    return await db.select().from(eventCategories).where(eq(eventCategories.coupleId, coupleId)).orderBy(eventCategories.createdAt);
+  }
+
+  async createEventCategory(category: InsertEventCategory): Promise<EventCategory> {
+    const [created] = await db.insert(eventCategories).values(category).returning();
+    return created;
+  }
+
+  async deleteEventCategory(id: string): Promise<void> {
+    await db.delete(eventCategories).where(eq(eventCategories.id, id));
   }
 }
 

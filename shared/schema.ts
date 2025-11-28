@@ -108,6 +108,14 @@ export const calendarEvents = pgTable("calendar_events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const eventCategories = pgTable("event_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertCoupleSchema = createInsertSchema(couples).omit({
   id: true,
@@ -163,6 +171,11 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
   createdAt: true,
 });
 
+export const insertEventCategorySchema = createInsertSchema(eventCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertCouple = z.infer<typeof insertCoupleSchema>;
 export type Couple = typeof couples.$inferSelect;
@@ -193,3 +206,6 @@ export type SharedNote = typeof sharedNotes.$inferSelect;
 
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+export type InsertEventCategory = z.infer<typeof insertEventCategorySchema>;
+export type EventCategory = typeof eventCategories.$inferSelect;
