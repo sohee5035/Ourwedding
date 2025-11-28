@@ -117,6 +117,7 @@ const Calendar = () => {
   const [isPastEventsExpanded, setIsPastEventsExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDateEventsModalOpen, setIsDateEventsModalOpen] = useState(false);
+  const [viewingSource, setViewingSource] = useState<'date-modal' | null>(null);
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -190,9 +191,17 @@ const Calendar = () => {
     setIsEventModalOpen(true);
   };
 
-  const openViewEventModal = (event: CalendarEvent) => {
+  const openViewEventModal = (event: CalendarEvent, source: 'date-modal' | null = null) => {
+    setViewingSource(source);
     setViewingEvent(event);
     setIsViewModalOpen(true);
+  };
+
+  const handleBackToDateModal = () => {
+    setIsViewModalOpen(false);
+    setViewingEvent(null);
+    setViewingSource(null);
+    setIsDateEventsModalOpen(true);
   };
 
   const handleDateClick = (day: Date) => {
@@ -1038,13 +1047,28 @@ const Calendar = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+      <Dialog open={isViewModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setViewingSource(null);
+          }
+          setIsViewModalOpen(open);
+        }}>
         <DialogContent className="sm:max-w-md">
           {viewingEvent && (() => {
             const categoryInfo = getCategoryInfo(viewingEvent.category);
             const colorClasses = getColorClasses(categoryInfo.color);
             return (
               <>
+                {viewingSource === 'date-modal' && (
+                  <button
+                    onClick={handleBackToDateModal}
+                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2 -mt-2"
+                    data-testid="button-back-to-date-modal"
+                  >
+                    <FaChevronLeft className="text-xs" />
+                    <span>목록으로</span>
+                  </button>
+                )}
                 <DialogHeader>
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-xl ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
@@ -1152,7 +1176,7 @@ const Calendar = () => {
                         key={`event-${event.id}`}
                         onClick={() => {
                           setIsDateEventsModalOpen(false);
-                          openViewEventModal(event);
+                          openViewEventModal(event, 'date-modal');
                         }}
                         className={`w-full flex items-center gap-3 p-3 ${colorClasses.bgLight} rounded-xl hover:opacity-80 transition-colors text-left`}
                         data-testid={`date-modal-event-${event.id}`}
