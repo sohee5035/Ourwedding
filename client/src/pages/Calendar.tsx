@@ -1070,7 +1070,7 @@ const Calendar = () => {
                   <div className="flex gap-2 pt-2 border-t">
                     <button
                       onClick={() => openEditEventModal(viewingEvent)}
-                      className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                      className="flex-1 py-3 px-4 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                       data-testid="button-view-edit"
                     >
                       <FaEdit /> 수정
@@ -1080,7 +1080,7 @@ const Calendar = () => {
                         setIsViewModalOpen(false);
                         confirmDeleteEvent(viewingEvent);
                       }}
-                      className="flex-1 py-2 px-4 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 py-3 px-4 bg-red-50 text-red-600 rounded-xl font-medium hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                       data-testid="button-view-delete"
                     >
                       <FaTrash /> 삭제
