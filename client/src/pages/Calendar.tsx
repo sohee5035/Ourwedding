@@ -538,24 +538,7 @@ const Calendar = () => {
           </div>
 
           <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800">다가오는 일정</h3>
-              <div className="flex items-center gap-3 text-xs flex-wrap">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-amber-400"></div>
-                  <span className="text-gray-500">견적</span>
-                </div>
-                {allCategories.slice(0, 3).map(cat => {
-                  const colorClasses = getColorClasses(cat.color);
-                  return (
-                    <div key={cat.id} className="flex items-center gap-1">
-                      <div className={`w-3 h-3 rounded ${colorClasses.bg}`}></div>
-                      <span className="text-gray-500">{cat.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-4">다가오는 일정</h3>
 
             {allUpcomingQuotes.length === 0 && allUpcomingEvents.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
