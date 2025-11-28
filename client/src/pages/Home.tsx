@@ -279,7 +279,7 @@ const Home = () => {
                         </button>
                         <button
                           onClick={() => setDeletingNoteId(note.id)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          className="text-gray-400 hover:text-blush-500 transition-colors"
                           data-testid={`button-delete-note-${note.id}`}
                         >
                           <FaTrash className="text-xs" />
@@ -337,7 +337,7 @@ const Home = () => {
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+                className="flex-1 py-2 rounded-lg bg-blush-400 text-white hover:bg-blush-500 transition-colors"
                 data-testid="button-confirm-delete"
               >
                 삭제
