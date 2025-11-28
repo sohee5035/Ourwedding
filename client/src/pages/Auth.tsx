@@ -4,6 +4,13 @@ import { FaHeart, FaUserPlus, FaSignInAlt, FaUsers } from 'react-icons/fa';
 
 type AuthMode = 'welcome' | 'register' | 'join' | 'login';
 
+interface InvitePreview {
+  valid: boolean;
+  assignedRole?: 'bride' | 'groom';
+  partnerName?: string;
+  error?: string;
+}
+
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('welcome');
   const [name, setName] = useState('');
@@ -12,8 +19,44 @@ const Auth = () => {
   const [role, setRole] = useState<'bride' | 'groom'>('bride');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
   
   const { register, join, login } = useAuthStore();
+
+  const checkInviteCode = async (code: string) => {
+    if (code.length !== 6) {
+      setInvitePreview(null);
+      return;
+    }
+    
+    setIsCheckingCode(true);
+    try {
+      const res = await fetch(`/api/auth/invite/${code}`);
+      const data = await res.json();
+      setInvitePreview(data);
+      if (!data.valid && data.error) {
+        setError(data.error);
+      } else {
+        setError('');
+      }
+    } catch {
+      setInvitePreview(null);
+    } finally {
+      setIsCheckingCode(false);
+    }
+  };
+
+  const handleInviteCodeChange = (value: string) => {
+    const code = value.toUpperCase().slice(0, 6);
+    setInviteCode(code);
+    if (code.length === 6) {
+      checkInviteCode(code);
+    } else {
+      setInvitePreview(null);
+      setError('');
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +100,7 @@ const Auth = () => {
     setInviteCode('');
     setRole('bride');
     setError('');
+    setInvitePreview(null);
   };
 
   if (mode === 'welcome') {
@@ -225,13 +269,36 @@ const Auth = () => {
                 type="text"
                 className="input-field text-center text-2xl tracking-[0.5em] uppercase"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase().slice(0, 6))}
+                onChange={(e) => handleInviteCodeChange(e.target.value)}
                 placeholder="ABC123"
                 maxLength={6}
                 required
                 data-testid="input-join-code"
               />
+              {isCheckingCode && (
+                <p className="text-sm text-gray-500 mt-2 text-center">확인 중...</p>
+              )}
             </div>
+
+            {invitePreview?.valid && (
+              <div className={`p-4 rounded-xl border-2 ${
+                invitePreview.assignedRole === 'groom' 
+                  ? 'bg-blue-50 border-blue-200' 
+                  : 'bg-pink-50 border-pink-200'
+              }`}>
+                <div className="text-center">
+                  <span className="text-3xl block mb-2">
+                    {invitePreview.assignedRole === 'groom' ? '🤵' : '👰'}
+                  </span>
+                  <p className={`font-medium ${
+                    invitePreview.assignedRole === 'groom' ? 'text-blue-700' : 'text-pink-700'
+                  }`}>
+                    {invitePreview.partnerName}님의 
+                    {invitePreview.assignedRole === 'groom' ? ' 예비 신랑' : ' 예비 신부'}으로 합류해요
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="label">이름 (실명)</label>
@@ -269,7 +336,7 @@ const Auth = () => {
             <button
               type="submit"
               className="w-full btn-primary py-3"
-              disabled={isSubmitting || pin.length !== 4 || inviteCode.length !== 6}
+              disabled={isSubmitting || pin.length !== 4 || !invitePreview?.valid}
               data-testid="button-submit-join"
             >
               {isSubmitting ? '합류 중...' : '합류하기'}

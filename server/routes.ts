@@ -334,6 +334,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auth - Check invite code (preview assigned role)
+  app.get("/api/auth/invite/:code", async (req, res) => {
+    try {
+      const code = req.params.code.toUpperCase();
+      const couple = await storage.getCoupleByInviteCode(code);
+      
+      if (!couple) {
+        return res.json({ valid: false, error: "잘못된 초대 코드입니다" });
+      }
+      
+      const existingMembers = await storage.getMembersByCouple(couple.id);
+      if (existingMembers.length >= 2) {
+        return res.json({ valid: false, error: "이미 커플이 완성되었습니다" });
+      }
+      
+      const firstMemberRole = existingMembers[0]?.role || 'bride';
+      const assignedRole = firstMemberRole === 'bride' ? 'groom' : 'bride';
+      const partnerName = existingMembers[0]?.name || '';
+      
+      res.json({ valid: true, assignedRole, partnerName });
+    } catch (error) {
+      res.json({ valid: false, error: "초대 코드 확인에 실패했습니다" });
+    }
+  });
+
   // Auth - Join (second member joins with invite code)
   const joinSchema = z.object({
     name: z.string().min(1),
