@@ -127,10 +127,15 @@ Preferred communication style: Simple, everyday language.
 ### Third-Party Services
 
 **Map Integration**
-- Kakao Maps API for displaying venue locations
-- Requires API key configuration (placeholder: YOUR_APP_KEY)
-- Map markers for each venue with info windows
+- Leaflet/OpenStreetMap for displaying venue locations
+- Map markers for each venue with popups
 - Interactive map navigation and centering
+
+**Image Storage (Cloudinary)**
+- Cloudinary for optimized image hosting
+- Automatic image optimization (resizing, quality, format)
+- Secure upload via server-side API
+- Images stored with URL and publicId for proper cleanup
 
 **Database Service**
 - Neon PostgreSQL serverless database
