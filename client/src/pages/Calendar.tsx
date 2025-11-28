@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
 import { useVenueStore } from '../store/venueStore';
+import { useCalendarEventStore } from '../store/calendarEventStore';
 import { 
   format, 
   startOfMonth, 
@@ -12,12 +13,35 @@ import {
   isSameDay, 
   addMonths, 
   subMonths,
-  parseISO
+  parseISO,
+  isAfter,
+  isBefore
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaList, FaMapMarkerAlt, FaTimes, FaUsers, FaUtensils, FaBuilding } from 'react-icons/fa';
+import { 
+  FaChevronLeft, 
+  FaChevronRight, 
+  FaCalendarAlt, 
+  FaList, 
+  FaTimes, 
+  FaUsers, 
+  FaUtensils, 
+  FaBuilding,
+  FaPlus,
+  FaChevronDown,
+  FaChevronUp,
+  FaEdit,
+  FaTrash,
+  FaHeart,
+  FaRing,
+  FaHome,
+  FaTshirt,
+  FaCouch,
+  FaEllipsisH
+} from 'react-icons/fa';
 import { Link } from 'wouter';
 import type { VenueQuote, WeddingVenue } from '../types';
+import type { CalendarEvent } from '@shared/schema';
 
 import {
   Drawer,
@@ -27,23 +51,58 @@ import {
   DrawerDescription,
 } from '@/components/ui/drawer';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 interface QuoteWithVenue extends VenueQuote {
   venue?: WeddingVenue;
 }
 
+const EVENT_CATEGORIES = [
+  { value: '예식장 방문', label: '예식장 방문', color: 'bg-pink-400', icon: FaRing },
+  { value: '상견례', label: '상견례', color: 'bg-purple-400', icon: FaHeart },
+  { value: '가족 식사', label: '가족 식사', color: 'bg-orange-400', icon: FaHome },
+  { value: '드레스 투어', label: '드레스 투어', color: 'bg-rose-400', icon: FaTshirt },
+  { value: '가전가구 상담', label: '가전가구 상담', color: 'bg-teal-400', icon: FaCouch },
+  { value: '기타', label: '기타', color: 'bg-gray-400', icon: FaEllipsisH },
+] as const;
+
+const getCategoryInfo = (category: string) => {
+  return EVENT_CATEGORIES.find(c => c.value === category) || EVENT_CATEGORIES[5];
+};
+
 const Calendar = () => {
   const { items, fetchItems } = useChecklistStore();
   const { venues, venueQuotes, fetchVenues, fetchVenueQuotes, getVenueById } = useVenueStore();
+  const { events, fetchEvents, addEvent, updateEvent, deleteEvent } = useCalendarEventStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timetable'>('calendar');
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithVenue | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    date: '',
+    time: '',
+    category: '기타',
+    memo: '',
+  });
 
   useEffect(() => {
     fetchItems();
     fetchVenues();
     fetchVenueQuotes();
-  }, [fetchItems, fetchVenues, fetchVenueQuotes]);
+    fetchEvents();
+  }, [fetchItems, fetchVenues, fetchVenueQuotes, fetchEvents]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -60,7 +119,6 @@ const Calendar = () => {
   const today = () => setCurrentDate(new Date());
 
   const datedItems = items.filter(item => item.date);
-
   const datedQuotes = venueQuotes.filter(quote => quote.date);
 
   const handleQuoteClick = (quote: VenueQuote) => {
@@ -74,6 +132,121 @@ const Calendar = () => {
     setSelectedQuote(null);
   };
 
+  const openAddEventModal = (date?: string) => {
+    setEditingEvent(null);
+    setEventForm({
+      title: '',
+      date: date || format(new Date(), 'yyyy-MM-dd'),
+      time: '',
+      category: '기타',
+      memo: '',
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const openEditEventModal = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setEventForm({
+      title: event.title,
+      date: event.date,
+      time: event.time || '',
+      category: event.category,
+      memo: event.memo || '',
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleEventSubmit = async () => {
+    if (!eventForm.title.trim() || !eventForm.date) return;
+
+    if (editingEvent) {
+      await updateEvent(editingEvent.id, {
+        title: eventForm.title,
+        date: eventForm.date,
+        time: eventForm.time || null,
+        category: eventForm.category,
+        memo: eventForm.memo || null,
+      });
+    } else {
+      await addEvent({
+        title: eventForm.title,
+        date: eventForm.date,
+        time: eventForm.time || null,
+        category: eventForm.category,
+        memo: eventForm.memo || null,
+      });
+    }
+    setIsEventModalOpen(false);
+  };
+
+  const confirmDeleteEvent = (event: CalendarEvent) => {
+    setEventToDelete(event);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteEvent = async () => {
+    if (eventToDelete) {
+      await deleteEvent(eventToDelete.id);
+      setIsDeleteConfirmOpen(false);
+      setEventToDelete(null);
+    }
+  };
+
+  const getEventsForDay = (day: Date) => {
+    return events.filter(event => 
+      event.date && isSameDay(parseISO(event.date), day)
+    );
+  };
+
+  const getQuotesForDay = (day: Date) => {
+    return datedQuotes.filter(quote =>
+      quote.date && isSameDay(parseISO(quote.date), day)
+    );
+  };
+
+  const getColorBarsForDay = (day: Date) => {
+    const dayEvents = getEventsForDay(day);
+    const dayQuotes = getQuotesForDay(day);
+    const colors: string[] = [];
+    
+    dayQuotes.forEach(() => {
+      colors.push('bg-amber-400');
+    });
+    
+    dayEvents.forEach(event => {
+      const categoryInfo = getCategoryInfo(event.category);
+      colors.push(categoryInfo.color);
+    });
+    
+    return colors.slice(0, 4);
+  };
+
+  const allUpcomingEvents = [...events]
+    .filter(e => {
+      if (!e.date) return false;
+      const eventDate = parseISO(e.date);
+      return isAfter(eventDate, new Date()) || isSameDay(eventDate, new Date());
+    })
+    .sort((a, b) => {
+      if (a.date && b.date) {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      return 0;
+    });
+
+  const allUpcomingQuotes = [...datedQuotes]
+    .filter(q => {
+      if (!q.date) return false;
+      const quoteDate = parseISO(q.date);
+      return isAfter(quoteDate, new Date()) || isSameDay(quoteDate, new Date());
+    })
+    .sort((a, b) => {
+      if (a.date && b.date) {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      return 0;
+    });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -82,135 +255,275 @@ const Calendar = () => {
           <p className="text-gray-600 mt-2">결혼 준비 주요 일정을 확인하세요</p>
         </div>
         
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex gap-2">
           <button
-            onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-              viewMode === 'calendar' 
-                ? 'bg-white text-blush-500 shadow-sm font-medium' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            data-testid="button-calendar-view"
+            onClick={() => openAddEventModal()}
+            className="btn-primary flex items-center gap-2"
+            data-testid="button-add-event"
           >
-            <FaCalendarAlt /> 달력
+            <FaPlus /> 일정 추가
           </button>
-          <button
-            onClick={() => setViewMode('timetable')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-              viewMode === 'timetable' 
-                ? 'bg-white text-blush-500 shadow-sm font-medium' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            data-testid="button-timetable-view"
-          >
-            <FaList /> 타임테이블
-          </button>
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                viewMode === 'calendar' 
+                  ? 'bg-white text-blush-500 shadow-sm font-medium' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              data-testid="button-calendar-view"
+            >
+              <FaCalendarAlt /> 달력
+            </button>
+            <button
+              onClick={() => setViewMode('timetable')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                viewMode === 'timetable' 
+                  ? 'bg-white text-blush-500 shadow-sm font-medium' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              data-testid="button-timetable-view"
+            >
+              <FaList /> 타임테이블
+            </button>
+          </div>
         </div>
       </div>
 
       {viewMode === 'calendar' ? (
-        <div className="card p-0 overflow-hidden">
-          <div className="p-4 flex justify-between items-center bg-blush-50 border-b border-blush-100">
-            <button onClick={prevMonth} className="p-2 hover:bg-blush-100 rounded-full text-blush-600" data-testid="button-prev-month">
-              <FaChevronLeft />
-            </button>
-            <h2 className="text-xl font-bold text-gray-800">
-              {format(currentDate, 'yyyy년 M월', { locale: ko })}
-            </h2>
-            <div className="flex gap-2">
-              <button onClick={today} className="px-3 py-1 text-sm bg-white border border-blush-200 rounded-full text-blush-600 hover:bg-blush-50" data-testid="button-today">
-                오늘
+        <div className="space-y-4">
+          <div className="card p-0 overflow-hidden">
+            <div className="p-4 flex justify-between items-center bg-blush-50 border-b border-blush-100">
+              <button onClick={prevMonth} className="p-2 hover:bg-blush-100 rounded-full text-blush-600" data-testid="button-prev-month">
+                <FaChevronLeft />
               </button>
-              <button onClick={nextMonth} className="p-2 hover:bg-blush-100 rounded-full text-blush-600" data-testid="button-next-month">
-                <FaChevronRight />
-              </button>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-gray-800">
+                  {format(currentDate, 'yyyy년 M월', { locale: ko })}
+                </h2>
+                <button 
+                  onClick={() => setIsCalendarExpanded(!isCalendarExpanded)}
+                  className="p-1.5 hover:bg-blush-100 rounded-full text-blush-500"
+                  data-testid="button-toggle-calendar"
+                >
+                  {isCalendarExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={today} className="px-3 py-1 text-sm bg-white border border-blush-200 rounded-full text-blush-600 hover:bg-blush-50" data-testid="button-today">
+                  오늘
+                </button>
+                <button onClick={nextMonth} className="p-2 hover:bg-blush-100 rounded-full text-blush-600" data-testid="button-next-month">
+                  <FaChevronRight />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 bg-white border-b border-gray-100">
+              {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
+                <div 
+                  key={day} 
+                  className={`py-3 text-center text-sm font-medium ${
+                    i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-500'
+                  }`}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            <div className={`grid grid-cols-7 bg-gray-50 transition-all duration-300 ${isCalendarExpanded ? '' : 'max-h-[200px] overflow-hidden'}`}>
+              {calendarDays.map((day) => {
+                const isSelectedMonth = isSameMonth(day, monthStart);
+                const isTodayDate = isSameDay(day, new Date());
+                
+                const dayItems = datedItems.filter(item => 
+                  item.date && isSameDay(parseISO(item.date), day)
+                );
+
+                const dayQuotes = getQuotesForDay(day);
+                const dayEvents = getEventsForDay(day);
+                const colorBars = getColorBarsForDay(day);
+
+                return (
+                  <div
+                    key={day.toString()}
+                    onClick={() => !isCalendarExpanded && openAddEventModal(format(day, 'yyyy-MM-dd'))}
+                    className={`${isCalendarExpanded ? 'min-h-[100px]' : 'min-h-[50px]'} bg-white border-b border-r border-gray-100 p-2 transition-colors hover:bg-gray-50 ${
+                      !isSelectedMonth ? 'bg-gray-50/50' : ''
+                    } ${!isCalendarExpanded ? 'cursor-pointer' : ''}`}
+                    data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span
+                        className={`text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full ${
+                          isTodayDate
+                            ? 'bg-blush-500 text-white'
+                            : !isSelectedMonth
+                            ? 'text-gray-400'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {format(day, 'd')}
+                      </span>
+                    </div>
+                    
+                    {isCalendarExpanded ? (
+                      <div className="mt-2 space-y-1">
+                        {dayQuotes.map(quote => {
+                          const venue = getVenueById(quote.venueId);
+                          return (
+                            <button
+                              key={quote.id}
+                              onClick={() => handleQuoteClick(quote)}
+                              className="w-full text-left text-xs px-2 py-1 rounded bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 truncate hover:from-amber-200 hover:to-amber-100 transition-colors flex items-center gap-1"
+                              title={venue?.name || '웨딩홀'}
+                              data-testid={`quote-event-${quote.id}`}
+                            >
+                              <FaBuilding className="text-amber-500 flex-shrink-0" />
+                              <span className="truncate">{venue?.name || '웨딩홀'}</span>
+                              {quote.time && (
+                                <span className="text-amber-500 flex-shrink-0 ml-auto">{quote.time}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {dayEvents.map(event => {
+                          const categoryInfo = getCategoryInfo(event.category);
+                          const IconComponent = categoryInfo.icon;
+                          return (
+                            <button
+                              key={event.id}
+                              onClick={() => openEditEventModal(event)}
+                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${categoryInfo.color} bg-opacity-20 hover:bg-opacity-30 transition-colors`}
+                              title={event.title}
+                              data-testid={`calendar-event-${event.id}`}
+                            >
+                              <IconComponent className={`flex-shrink-0 ${categoryInfo.color.replace('bg-', 'text-').replace('-400', '-600')}`} />
+                              <span className="truncate text-gray-700">{event.title}</span>
+                              {event.time && (
+                                <span className="text-gray-500 flex-shrink-0 ml-auto">{event.time}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {dayItems.map(item => (
+                          <div 
+                            key={item.id} 
+                            className={`text-xs px-2 py-1 rounded truncate ${
+                              item.completed 
+                                ? 'bg-gray-100 text-gray-400 line-through' 
+                                : 'bg-blush-100 text-blush-700'
+                            }`}
+                            title={item.title}
+                          >
+                            {item.title}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex gap-0.5 mt-1">
+                        {colorBars.map((color, idx) => (
+                          <div key={idx} className={`h-1.5 flex-1 rounded-full ${color}`} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-7 bg-white border-b border-gray-100">
-            {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-              <div 
-                key={day} 
-                className={`py-3 text-center text-sm font-medium ${
-                  i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-500'
-                }`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 bg-gray-50">
-            {calendarDays.map((day) => {
-              const isSelectedMonth = isSameMonth(day, monthStart);
-              const isTodayDate = isSameDay(day, new Date());
-              
-              const dayItems = datedItems.filter(item => 
-                item.date && isSameDay(parseISO(item.date), day)
-              );
-
-              const dayQuotes = datedQuotes.filter(quote =>
-                quote.date && isSameDay(parseISO(quote.date), day)
-              );
-
-              return (
-                <div
-                  key={day.toString()}
-                  className={`min-h-[100px] bg-white border-b border-r border-gray-100 p-2 transition-colors hover:bg-gray-50 ${
-                    !isSelectedMonth ? 'bg-gray-50/50' : ''
-                  }`}
-                  data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span
-                      className={`text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full ${
-                        isTodayDate
-                          ? 'bg-blush-500 text-white'
-                          : !isSelectedMonth
-                          ? 'text-gray-400'
-                          : 'text-gray-700'
-                      }`}
-                    >
-                      {format(day, 'd')}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-2 space-y-1">
-                    {dayQuotes.map(quote => {
-                      const venue = getVenueById(quote.venueId);
-                      return (
-                        <button
-                          key={quote.id}
-                          onClick={() => handleQuoteClick(quote)}
-                          className="w-full text-left text-xs px-2 py-1 rounded bg-gradient-to-r from-gold-100 to-blush-100 text-gold-700 truncate hover:from-gold-200 hover:to-blush-200 transition-colors flex items-center gap-1"
-                          title={venue?.name || '웨딩홀'}
-                          data-testid={`quote-event-${quote.id}`}
-                        >
-                          <FaMapMarkerAlt className="text-blush-500 flex-shrink-0" />
-                          <span className="truncate">{venue?.name || '웨딩홀'}</span>
-                          {quote.time && (
-                            <span className="text-gold-500 flex-shrink-0 ml-auto">{quote.time}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                    {dayItems.map(item => (
-                      <div 
-                        key={item.id} 
-                        className={`text-xs px-2 py-1 rounded truncate ${
-                          item.completed 
-                            ? 'bg-gray-100 text-gray-400 line-through' 
-                            : 'bg-blush-100 text-blush-700'
-                        }`}
-                        title={item.title}
-                      >
-                        {item.title}
-                      </div>
-                    ))}
-                  </div>
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">다가오는 일정</h3>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-amber-400"></div>
+                  <span className="text-gray-500">견적</span>
                 </div>
-              );
-            })}
+                {EVENT_CATEGORIES.slice(0, 3).map(cat => (
+                  <div key={cat.value} className="flex items-center gap-1">
+                    <div className={`w-3 h-3 rounded ${cat.color}`}></div>
+                    <span className="text-gray-500">{cat.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {allUpcomingQuotes.length === 0 && allUpcomingEvents.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <FaCalendarAlt className="text-3xl mx-auto mb-2" />
+                <p>예정된 일정이 없습니다</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {allUpcomingQuotes.map(quote => {
+                  const venue = getVenueById(quote.venueId);
+                  return (
+                    <button
+                      key={`quote-${quote.id}`}
+                      onClick={() => handleQuoteClick(quote)}
+                      className="w-full flex items-center gap-3 p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors text-left"
+                      data-testid={`upcoming-quote-${quote.id}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center">
+                        <FaBuilding className="text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{venue?.name || '웨딩홀 견적'}</p>
+                        <p className="text-sm text-gray-500">
+                          {quote.date ? format(parseISO(quote.date), 'M월 d일 (EEE)', { locale: ko }) : '날짜 미정'}
+                          {quote.time && ` ${quote.time}`}
+                        </p>
+                      </div>
+                      <div className="text-amber-600 font-semibold text-sm">
+                        {((quote.estimate || 0) / 10000).toLocaleString()}만원
+                      </div>
+                    </button>
+                  );
+                })}
+                
+                {allUpcomingEvents.map(event => {
+                  const categoryInfo = getCategoryInfo(event.category);
+                  const IconComponent = categoryInfo.icon;
+                  return (
+                    <div
+                      key={`event-${event.id}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl ${categoryInfo.color} bg-opacity-10`}
+                      data-testid={`upcoming-event-${event.id}`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg ${categoryInfo.color} bg-opacity-30 flex items-center justify-center`}>
+                        <IconComponent className={`${categoryInfo.color.replace('bg-', 'text-').replace('-400', '-600')}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{event.title}</p>
+                        <p className="text-sm text-gray-500">
+                          {format(parseISO(event.date), 'M월 d일 (EEE)', { locale: ko })}
+                          {event.time && ` ${event.time}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditEventModal(event)}
+                          className="p-2 text-gray-400 hover:text-blush-500 rounded-full hover:bg-white/50"
+                          data-testid={`button-edit-event-${event.id}`}
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => confirmDeleteEvent(event)}
+                          className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-white/50"
+                          data-testid={`button-delete-event-${event.id}`}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -236,7 +549,7 @@ const Calendar = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <DrawerTitle className="text-xl flex items-center gap-2">
-                      <FaMapMarkerAlt className="text-blush-500" />
+                      <FaBuilding className="text-amber-500" />
                       {selectedQuote.venue?.name || '웨딩홀'}
                     </DrawerTitle>
                     <DrawerDescription className="mt-1">
@@ -253,8 +566,8 @@ const Calendar = () => {
               </DrawerHeader>
 
               <div className="px-4 pb-6 space-y-4">
-                <div className="bg-gradient-to-r from-gold-50 to-blush-50 rounded-xl p-4 border border-gold-100">
-                  <div className="flex items-center gap-2 text-gold-700 font-medium mb-2">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                  <div className="flex items-center gap-2 text-amber-700 font-medium mb-2">
                     <FaCalendarAlt />
                     예식 일정
                   </div>
@@ -266,9 +579,9 @@ const Calendar = () => {
                   </p>
                 </div>
 
-                <div className="bg-blush-50 rounded-xl p-4">
+                <div className="bg-amber-50 rounded-xl p-4">
                   <p className="text-sm text-gray-600 mb-1">견적</p>
-                  <p className="text-2xl font-bold text-blush-600">
+                  <p className="text-2xl font-bold text-amber-600">
                     {(selectedQuote.estimate || 0).toLocaleString()}원
                   </p>
                 </div>
@@ -332,6 +645,134 @@ const Calendar = () => {
           )}
         </DrawerContent>
       </Drawer>
+
+      <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingEvent ? '일정 수정' : '새 일정 추가'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">일정 제목</label>
+              <input
+                type="text"
+                value={eventForm.title}
+                onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                placeholder="일정 제목을 입력하세요"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                data-testid="input-event-title"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+              <div className="grid grid-cols-3 gap-2">
+                {EVENT_CATEGORIES.map(cat => {
+                  const IconComponent = cat.icon;
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => setEventForm({ ...eventForm, category: cat.value })}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-colors ${
+                        eventForm.category === cat.value
+                          ? `${cat.color} bg-opacity-20 border-current`
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      data-testid={`button-category-${cat.value}`}
+                    >
+                      <IconComponent className={`${cat.color.replace('bg-', 'text-').replace('-400', '-500')}`} />
+                      <span className="text-xs text-gray-600">{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+                <input
+                  type="date"
+                  value={eventForm.date}
+                  onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                  data-testid="input-event-date"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">시간 (선택)</label>
+                <input
+                  type="time"
+                  value={eventForm.time}
+                  onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                  data-testid="input-event-time"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">메모 (선택)</label>
+              <textarea
+                value={eventForm.memo}
+                onChange={(e) => setEventForm({ ...eventForm, memo: e.target.value })}
+                placeholder="메모를 입력하세요"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400 resize-none"
+                data-testid="input-event-memo"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setIsEventModalOpen(false)}
+                className="btn-secondary flex-1"
+                data-testid="button-cancel-event"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleEventSubmit}
+                disabled={!eventForm.title.trim() || !eventForm.date}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="button-save-event"
+              >
+                {editingEvent ? '수정' : '추가'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>일정 삭제</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600 text-center">
+              "{eventToDelete?.title}" 일정을<br />삭제하시겠습니까?
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className="btn-secondary flex-1"
+              data-testid="button-cancel-delete"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleDeleteEvent}
+              className="flex-1 py-2 px-4 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors"
+              data-testid="button-confirm-delete"
+            >
+              삭제
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
