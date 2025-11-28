@@ -936,7 +936,7 @@ const Calendar = () => {
       </Dialog>
 
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-xs mx-4">
           <DialogHeader>
             <DialogTitle>카테고리 관리</DialogTitle>
           </DialogHeader>
