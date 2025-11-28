@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGuestStore } from '../store/guestStore';
 import { useAuthStore } from '../store/authStore';
-import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes } from 'react-icons/fa';
 import type { Guest } from '../types';
 
 interface BulkGuestRow {
@@ -18,6 +18,9 @@ const Guests = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [attendanceDropdownId, setAttendanceDropdownId] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
@@ -47,6 +50,40 @@ const Guests = () => {
       setBulkSide(side);
     }
   }, [member?.role]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (attendanceDropdownId && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-testid^="button-attendance-"]')) {
+          setAttendanceDropdownId(null);
+        }
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (attendanceDropdownId) setAttendanceDropdownId(null);
+        if (deleteConfirmId) setDeleteConfirmId(null);
+        if (showAddForm) resetForm();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [attendanceDropdownId, deleteConfirmId, showAddForm]);
+
+  const handleQuickAttendanceChange = (guestId: string, attendance: 'pending' | 'attending' | 'declined') => {
+    updateGuest(guestId, { attendance });
+    setAttendanceDropdownId(null);
+  };
+
+  const handleDeleteConfirm = (id: string) => {
+    deleteGuest(id);
+    setDeleteConfirmId(null);
+  };
   const [bulkRows, setBulkRows] = useState<BulkGuestRow[]>([
     { name: '', phone: '', relation: '' },
     { name: '', phone: '', relation: '' },
@@ -341,158 +378,198 @@ const Guests = () => {
         </div>
       )}
 
-      {/* 추가/수정 폼 */}
+      {/* 추가/수정 모달 */}
       {showAddForm && (
-        <div className="card bg-blush-50">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
-            {editingId ? '하객 정보 수정' : '새 하객 추가'}
-          </h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">이름 *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="이름"
-                  data-testid="input-guest-name"
-                />
-              </div>
-
-              <div>
-                <label className="label">연락처</label>
-                <input
-                  type="tel"
-                  className="input-field"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="010-0000-0000"
-                  data-testid="input-guest-phone"
-                />
-              </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800">
+                {editingId ? '하객 정보 수정' : '새 하객 추가'}
+              </h3>
+              <button
+                onClick={resetForm}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+              >
+                <FaTimes />
+              </button>
             </div>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">이름 *</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="이름"
+                    data-testid="input-guest-name"
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">구분 *</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, side: 'groom' })}
-                    className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                      formData.side === 'groom'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-600 border border-gray-200'
-                    }`}
+                <div>
+                  <label className="label">연락처</label>
+                  <input
+                    type="tel"
+                    className="input-field"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="010-0000-0000"
+                    data-testid="input-guest-phone"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">구분 *</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, side: 'groom' })}
+                      className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                        formData.side === 'groom'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-200'
+                      }`}
+                    >
+                      <FaHeart className={formData.side === 'groom' ? 'text-white' : 'text-blue-400'} />
+                      신랑측
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, side: 'bride' })}
+                      className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                        formData.side === 'bride'
+                          ? 'bg-pink-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-200'
+                      }`}
+                    >
+                      <FaHeart className={formData.side === 'bride' ? 'text-white' : 'text-pink-400'} />
+                      신부측
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">관계</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={formData.relation}
+                    onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                    placeholder="예: 친구, 직장동료, 가족"
+                    data-testid="input-guest-relation"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="label">참석 여부</label>
+                  <select
+                    className="input-field"
+                    value={formData.attendance}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        attendance: e.target.value as 'pending' | 'attending' | 'declined',
+                      })
+                    }
+                    data-testid="select-attendance"
                   >
-                    <FaHeart className={formData.side === 'groom' ? 'text-white' : 'text-blue-400'} />
-                    신랑측
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, side: 'bride' })}
-                    className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                      formData.side === 'bride'
-                        ? 'bg-pink-500 text-white'
-                        : 'bg-white text-gray-600 border border-gray-200'
-                    }`}
-                  >
-                    <FaHeart className={formData.side === 'bride' ? 'text-white' : 'text-pink-400'} />
-                    신부측
-                  </button>
+                    <option value="pending">미정</option>
+                    <option value="attending">참석</option>
+                    <option value="declined">불참</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">테이블 번호</label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={formData.tableNumber || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tableNumber: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                    placeholder="테이블 번호"
+                    data-testid="input-table-number"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.invitationSent}
+                      onChange={(e) =>
+                        setFormData({ ...formData, invitationSent: e.target.checked })
+                      }
+                      className="w-5 h-5 text-blush-500 rounded focus:ring-blush-400"
+                      data-testid="checkbox-invitation"
+                    />
+                    <span className="text-sm text-gray-700">청첩장 발송</span>
+                  </label>
                 </div>
               </div>
 
               <div>
-                <label className="label">관계</label>
-                <input
-                  type="text"
+                <label className="label">메모</label>
+                <textarea
                   className="input-field"
-                  value={formData.relation}
-                  onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
-                  placeholder="예: 친구, 직장동료, 가족"
-                  data-testid="input-guest-relation"
+                  value={formData.memo}
+                  onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                  placeholder="메모 (선택사항)"
+                  rows={2}
+                  data-testid="textarea-memo"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="label">참석 여부</label>
-                <select
-                  className="input-field"
-                  value={formData.attendance}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      attendance: e.target.value as 'pending' | 'attending' | 'declined',
-                    })
-                  }
-                  data-testid="select-attendance"
+              <div className="flex gap-2 pt-2">
+                <button onClick={resetForm} className="btn-secondary flex-1">
+                  취소
+                </button>
+                <button
+                  onClick={editingId ? handleUpdate : handleAdd}
+                  className="btn-primary flex-1"
+                  data-testid="button-save-guest"
                 >
-                  <option value="pending">미정</option>
-                  <option value="attending">참석</option>
-                  <option value="declined">불참</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="label">테이블 번호</label>
-                <input
-                  type="number"
-                  className="input-field"
-                  value={formData.tableNumber || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tableNumber: e.target.value ? Number(e.target.value) : undefined,
-                    })
-                  }
-                  placeholder="테이블 번호"
-                  data-testid="input-table-number"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.invitationSent}
-                    onChange={(e) =>
-                      setFormData({ ...formData, invitationSent: e.target.checked })
-                    }
-                    className="w-5 h-5 text-blush-500 rounded focus:ring-blush-400"
-                    data-testid="checkbox-invitation"
-                  />
-                  <span className="text-sm text-gray-700">청첩장 발송</span>
-                </label>
+                  {editingId ? '수정' : '추가'}
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
 
-            <div>
-              <label className="label">메모</label>
-              <textarea
-                className="input-field"
-                value={formData.memo}
-                onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                placeholder="메모 (선택사항)"
-                rows={2}
-                data-testid="textarea-memo"
-              />
+      {/* 삭제 확인 모달 */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <FaTrash className="text-red-500 text-lg" />
             </div>
-
-            <div className="flex gap-2">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">하객 삭제</h3>
+            <p className="text-gray-600 mb-6">
+              '{guests.find(g => g.id === deleteConfirmId)?.name}' 님을 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-3">
               <button
-                onClick={editingId ? handleUpdate : handleAdd}
-                className="btn-primary flex-1"
-                data-testid="button-save-guest"
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
               >
-                {editingId ? '수정' : '추가'}
-              </button>
-              <button onClick={resetForm} className="btn-secondary flex-1">
                 취소
+              </button>
+              <button
+                onClick={() => handleDeleteConfirm(deleteConfirmId)}
+                className="flex-1 py-2.5 px-4 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+                data-testid="button-confirm-delete"
+              >
+                삭제
               </button>
             </div>
           </div>
@@ -578,16 +655,45 @@ const Guests = () => {
                     <td className="py-3 px-4 text-gray-600 hidden md:table-cell">
                       {guest.relation || '-'}
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        guest.attendance === 'attending'
-                          ? 'bg-green-100 text-green-700'
-                          : guest.attendance === 'declined'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                    <td className="py-3 px-4 relative">
+                      <button
+                        onClick={() => setAttendanceDropdownId(attendanceDropdownId === guest.id ? null : guest.id)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
+                          guest.attendance === 'attending'
+                            ? 'bg-green-100 text-green-700 hover:ring-green-300'
+                            : guest.attendance === 'declined'
+                            ? 'bg-red-100 text-red-700 hover:ring-red-300'
+                            : 'bg-yellow-100 text-yellow-700 hover:ring-yellow-300'
+                        }`}
+                        data-testid={`button-attendance-${guest.id}`}
+                      >
                         {guest.attendance === 'attending' ? '참석' : guest.attendance === 'declined' ? '불참' : '미정'}
-                      </span>
+                      </button>
+                      {attendanceDropdownId === guest.id && (
+                        <div 
+                          ref={dropdownRef}
+                          className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10 min-w-[80px]"
+                        >
+                          <button
+                            onClick={() => handleQuickAttendanceChange(guest.id, 'attending')}
+                            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${guest.attendance === 'attending' ? 'text-green-600 font-medium' : 'text-gray-700'}`}
+                          >
+                            참석
+                          </button>
+                          <button
+                            onClick={() => handleQuickAttendanceChange(guest.id, 'pending')}
+                            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${guest.attendance === 'pending' ? 'text-yellow-600 font-medium' : 'text-gray-700'}`}
+                          >
+                            미정
+                          </button>
+                          <button
+                            onClick={() => handleQuickAttendanceChange(guest.id, 'declined')}
+                            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${guest.attendance === 'declined' ? 'text-red-600 font-medium' : 'text-gray-700'}`}
+                          >
+                            불참
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-1">
@@ -599,7 +705,7 @@ const Guests = () => {
                           <FaEdit className="text-sm" />
                         </button>
                         <button
-                          onClick={() => deleteGuest(guest.id)}
+                          onClick={() => setDeleteConfirmId(guest.id)}
                           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                           data-testid={`button-delete-${guest.id}`}
                         >
