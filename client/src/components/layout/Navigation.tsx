@@ -13,7 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 
 const Navigation = () => {
   const [location] = useLocation();
-  const { member, partner, logout } = useAuthStore();
+  const { logout } = useAuthStore();
 
   const navItems = [
     { path: '/', icon: FaHeart, label: '홈' },
@@ -77,12 +77,6 @@ const Navigation = () => {
               
               <div className="border-l border-gray-200 h-8 mx-2"></div>
               
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>{member?.name}</span>
-                {partner && <span className="text-blush-400">❤️</span>}
-                {partner && <span>{partner.name}</span>}
-              </div>
-              
               <button
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
@@ -106,18 +100,13 @@ const Navigation = () => {
             <span className="text-lg font-serif font-bold text-gray-800">Our Wedding</span>
           </Link>
           
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
-              {member?.name} {partner ? `❤️ ${partner.name}` : ''}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-red-500 p-2"
-              data-testid="button-logout-mobile"
-            >
-              <FaSignOutAlt className="text-sm" />
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="text-gray-400 hover:text-red-500 p-2"
+            data-testid="button-logout-mobile"
+          >
+            <FaSignOutAlt className="text-sm" />
+          </button>
         </div>
       </div>
 
