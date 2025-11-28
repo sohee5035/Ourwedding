@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGuestStore } from '../store/guestStore';
 import { useAuthStore } from '../store/authStore';
-import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck } from 'react-icons/fa';
 import type { Guest } from '../types';
 
 interface BulkGuestRow {
@@ -20,7 +20,9 @@ const Guests = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [attendanceDropdownId, setAttendanceDropdownId] = useState<string | null>(null);
+  const [csvUploadResult, setCsvUploadResult] = useState<{ count: number; show: boolean } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
@@ -84,6 +86,119 @@ const Guests = () => {
     deleteGuest(id);
     setDeleteConfirmId(null);
   };
+
+  const downloadCsvTemplate = () => {
+    const headers = '이름,연락처,구분,관계,참석여부';
+    const sampleRows = [
+      '홍길동,010-1234-5678,신랑,대학친구,참석',
+      '김영희,010-9876-5432,신부,직장동료,미정',
+      '이철수,010-5555-6666,신랑,고등학교 친구,불참',
+    ];
+    const csvContent = [headers, ...sampleRows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '하객명단_양식.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    
+    if (lines.length < 2) {
+      alert('CSV 파일에 데이터가 없습니다.');
+      return;
+    }
+
+    const parseSide = (value: string): 'groom' | 'bride' => {
+      const v = value.trim().toLowerCase();
+      if (v === '신부' || v === 'bride' || v === '신부측') return 'bride';
+      return 'groom';
+    };
+
+    const parseAttendance = (value: string): 'attending' | 'pending' | 'declined' => {
+      const v = value.trim().toLowerCase();
+      if (v === '참석' || v === 'attending' || v === '참석예정') return 'attending';
+      if (v === '불참' || v === 'declined' || v === '불참예정') return 'declined';
+      return 'pending';
+    };
+
+    let addedCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = parseCsvLine(lines[i]);
+        const name = values[0]?.replace(/^"|"$/g, '');
+        if (!name) {
+          errorCount++;
+          continue;
+        }
+
+        const guestData = {
+          name,
+          phone: (values[1] || '').replace(/^"|"$/g, ''),
+          side: parseSide((values[2] || '').replace(/^"|"$/g, '')),
+          relation: (values[3] || '').replace(/^"|"$/g, ''),
+          attendance: parseAttendance((values[4] || '').replace(/^"|"$/g, '')),
+          invitationSent: false,
+          tableNumber: undefined,
+          memo: '',
+        };
+
+        await addGuest(guestData);
+        addedCount++;
+      } catch (e) {
+        errorCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      setCsvUploadResult({ count: addedCount, show: true });
+      setTimeout(() => setCsvUploadResult(null), 3000);
+    }
+    
+    if (errorCount > 0 && addedCount === 0) {
+      alert(`CSV 파일 형식이 올바르지 않습니다. 양식을 다운로드하여 확인해주세요.`);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const [bulkRows, setBulkRows] = useState<BulkGuestRow[]>([
     { name: '', phone: '', relation: '' },
     { name: '', phone: '', relation: '' },
@@ -202,6 +317,30 @@ const Guests = () => {
         </div>
         <div className="flex gap-2 shrink-0">
           <button
+            onClick={downloadCsvTemplate}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+            data-testid="button-download-template"
+            title="CSV 양식 다운로드"
+          >
+            <FaDownload />
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+            data-testid="button-upload-csv"
+            title="CSV 업로드"
+          >
+            <FaUpload />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleCsvUpload}
+            className="hidden"
+            data-testid="input-csv-file"
+          />
+          <button
             onClick={() => {
               setShowBulkForm(true);
               setShowAddForm(false);
@@ -247,6 +386,14 @@ const Guests = () => {
           <span className="font-bold text-yellow-600">{guests.filter((g) => g.attendance === 'pending').length}</span>
         </div>
       </div>
+
+      {/* CSV 업로드 결과 알림 */}
+      {csvUploadResult?.show && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
+          <FaCheck className="text-green-500" />
+          <span className="font-medium">{csvUploadResult.count}명의 하객이 추가되었습니다!</span>
+        </div>
+      )}
 
       {/* 대량 추가 폼 */}
       {showBulkForm && (
