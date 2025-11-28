@@ -463,7 +463,7 @@ const Calendar = () => {
                             <button
                               key={event.id}
                               onClick={() => openViewEventModal(event)}
-                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bg} bg-opacity-20 hover:bg-opacity-30 transition-colors`}
+                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bg} bg-opacity-10 hover:bg-opacity-15 transition-colors`}
                               title={event.title}
                               data-testid={`calendar-event-${event.id}`}
                             >
@@ -562,7 +562,7 @@ const Calendar = () => {
                     <button
                       key={`event-${event.id}`}
                       onClick={() => openViewEventModal(event)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-10 hover:bg-opacity-20 transition-colors text-left`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-[0.05] hover:bg-opacity-10 transition-colors text-left`}
                       data-testid={`upcoming-event-${event.id}`}
                     >
                       <div className={`w-10 h-10 rounded-lg ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
@@ -946,7 +946,7 @@ const Calendar = () => {
                   </div>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className={`${colorClasses.bg} bg-opacity-10 rounded-xl p-4`}>
+                  <div className={`${colorClasses.bg} bg-opacity-[0.05] rounded-xl p-4`}>
                     <div className="flex items-center gap-2 text-gray-600 mb-2">
                       <FaCalendarAlt className={colorClasses.text} />
                       <span className="font-medium">일정</span>
