@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useVenueStore } from '../store/venueStore';
-import { FaSave, FaTimes, FaPlus } from 'react-icons/fa';
+import { FaSave, FaTimes, FaPlus, FaCamera, FaTrash, FaSpinner } from 'react-icons/fa';
+import type { VenuePhoto } from '../types';
 
 const VenueForm = () => {
   const [, params] = useRoute('/venues/edit/:id');
@@ -9,6 +10,7 @@ const VenueForm = () => {
   const id = params?.id;
   const { addVenue, updateVenue, getVenueById, fetchVenues } = useVenueStore();
   const isEdit = !!id;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -16,7 +18,10 @@ const VenueForm = () => {
     lat: 37.5665,
     lng: 126.978,
     nearestStation: '',
+    photos: [] as VenuePhoto[],
   });
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVenues();
@@ -32,10 +37,67 @@ const VenueForm = () => {
           lat: venue.lat,
           lng: venue.lng,
           nearestStation: venue.nearestStation || '',
+          photos: venue.photos || [],
         });
       }
     }
   }, [id, isEdit, getVenueById]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formDataUpload = new FormData();
+        formDataUpload.append('image', file);
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+        if (!response.ok) throw new Error('Upload failed');
+        const data = await response.json();
+        return { url: data.url, publicId: data.publicId } as VenuePhoto;
+      });
+
+      const photos = await Promise.all(uploadPromises);
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...photos]
+      }));
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeImage = async (index: number, publicId: string) => {
+    setDeleting(publicId);
+    try {
+      const response = await fetch(`/api/upload/${encodeURIComponent(publicId)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        alert('사진 삭제에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index)
+      }));
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('사진 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +203,62 @@ const VenueForm = () => {
           <p className="text-xs text-gray-500">
             지도에서 위치를 표시하기 위해 위도/경도를 입력해주세요. 네이버 지도에서 해당 주소를 검색하면 URL에서 확인할 수 있습니다.
           </p>
+
+          <div>
+            <label className="label">웨딩홀 사진</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+              data-testid="input-venue-photos"
+            />
+            <div className="grid grid-cols-3 gap-3">
+              {formData.photos.map((photo, index) => (
+                <div key={index} className="relative group aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
+                  <img 
+                    src={photo.url} 
+                    alt={`웨딩홀 사진 ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index, photo.publicId)}
+                    disabled={deleting === photo.publicId}
+                    className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                    data-testid={`remove-photo-${index}`}
+                  >
+                    {deleting === photo.publicId ? (
+                      <FaSpinner className="text-xs animate-spin" />
+                    ) : (
+                      <FaTrash className="text-xs" />
+                    )}
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="aspect-[4/3] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-blush-400 hover:text-blush-500 transition-colors disabled:opacity-50"
+                data-testid="button-add-photo"
+              >
+                {uploading ? (
+                  <FaSpinner className="text-xl animate-spin" />
+                ) : (
+                  <>
+                    <FaCamera className="text-xl" />
+                    <span className="text-xs">사진 추가</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              웨딩홀 외관, 홀 내부, 로비 등의 사진을 추가하세요
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-4 pt-4">

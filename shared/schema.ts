@@ -1,7 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const venuePhotoSchema = z.object({
+  url: z.string(),
+  publicId: z.string()
+});
 
 export const couples = pgTable("couples", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -35,6 +40,7 @@ export const venues = pgTable("venues", {
   lat: real("lat").notNull().default(37.5665),
   lng: real("lng").notNull().default(126.978),
   nearestStation: text("nearest_station").default(''),
+  photos: jsonb("photos").default([]).$type<Array<{ url: string; publicId: string }>>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

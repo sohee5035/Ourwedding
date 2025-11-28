@@ -1,3 +1,9 @@
+// 사진 정보 (Cloudinary)
+export interface VenuePhoto {
+  url: string;
+  publicId: string;
+}
+
 // 웨딩홀 기본 정보
 export interface WeddingVenue {
   id: string;
@@ -6,6 +12,7 @@ export interface WeddingVenue {
   lat: number;
   lng: number;
   nearestStation: string; // 최인근 전철역
+  photos: VenuePhoto[]; // Cloudinary 이미지 정보
   createdAt: string;
   updatedAt: string;
 }

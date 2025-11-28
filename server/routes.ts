@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { createHash } from "crypto";
 import { z } from "zod";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
 import { 
   insertWeddingInfoSchema, 
   insertVenueSchema, 
@@ -18,6 +17,19 @@ import {
 } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+function getCloudinary() {
+  const { v2: cloudinary } = require("cloudinary");
+  const url = process.env.CLOUDINARY_URL;
+  if (url) {
+    let configUrl = url;
+    if (!url.startsWith('cloudinary://')) {
+      configUrl = `cloudinary://${url}`;
+    }
+    cloudinary.config({ cloudinary_url: configUrl });
+  }
+  return cloudinary;
+}
 
 function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
@@ -106,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No image file provided" });
       }
 
+      const cloudinary = getCloudinary();
       const result = await new Promise<any>((resolve, reject) => {
         cloudinary.uploader.upload_stream(
           {
@@ -117,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               { fetch_format: "auto" }
             ]
           },
-          (error, result) => {
+          (error: any, result: any) => {
             if (error) reject(error);
             else resolve(result);
           }
@@ -138,6 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/upload/:publicId", async (req, res) => {
     try {
+      const cloudinary = getCloudinary();
       const publicId = decodeURIComponent(req.params.publicId);
       await cloudinary.uploader.destroy(publicId);
       res.status(204).send();

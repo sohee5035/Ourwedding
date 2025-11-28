@@ -196,9 +196,19 @@ const Venues = () => {
                   className="flex items-center gap-3 cursor-pointer"
                   onClick={() => toggleVenue(venue.id)}
                 >
-                  <div className="w-10 h-10 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FaMapMarkerAlt className="text-blush-500" />
-                  </div>
+                  {venue.photos && venue.photos.length > 0 ? (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                      <img 
+                        src={venue.photos[0].url} 
+                        alt={venue.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-br from-blush-100 to-lavender-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <FaMapMarkerAlt className="text-blush-500" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-bold text-gray-800 truncate">{venue.name}</h3>
@@ -231,6 +241,21 @@ const Venues = () => {
 
                 {isExpanded && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
+                    {venue.photos && venue.photos.length > 0 && (
+                      <div className="mb-4">
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                          {venue.photos.map((photo, idx) => (
+                            <div key={idx} className="w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                              <img 
+                                src={photo.url} 
+                                alt={`${venue.name} ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-medium text-gray-600">견적 목록</h4>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
