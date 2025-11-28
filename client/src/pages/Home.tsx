@@ -222,8 +222,8 @@ const Home = () => {
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                   isMyNote(note.author)
-                    ? 'bg-gray-200 rounded-br-sm'
-                    : 'bg-gray-100 rounded-bl-sm'
+                    ? 'bg-gray-100 rounded-br-sm'
+                    : 'bg-gray-50 rounded-bl-sm border border-gray-100'
                 }`}
               >
                 {editingNoteId === note.id ? (
@@ -262,24 +262,22 @@ const Home = () => {
                       <p className="text-xs text-gray-500">
                         {note.createdAt && format(new Date(note.createdAt), 'M/d a h:mm', { locale: ko })}
                       </p>
-                      {isMyNote(note.author) && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleStartEdit(note)}
-                            className="text-gray-500 hover:text-gray-700 transition-colors"
-                            data-testid={`button-edit-note-${note.id}`}
-                          >
-                            <FaPen className="text-xs" />
-                          </button>
-                          <button
-                            onClick={() => deleteNote(note.id)}
-                            className="text-gray-500 hover:text-red-500 transition-colors"
-                            data-testid={`button-delete-note-${note.id}`}
-                          >
-                            <FaTrash className="text-xs" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStartEdit(note)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                          data-testid={`button-edit-note-${note.id}`}
+                        >
+                          <FaPen className="text-xs" />
+                        </button>
+                        <button
+                          onClick={() => deleteNote(note.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          data-testid={`button-delete-note-${note.id}`}
+                        >
+                          <FaTrash className="text-xs" />
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
