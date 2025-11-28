@@ -12,11 +12,11 @@ const VenueForm = () => {
   const isEdit = !!id;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_PHOTOS = 10;
+
   const [formData, setFormData] = useState({
     name: '',
     address: '',
-    lat: 37.5665,
-    lng: 126.978,
     nearestStation: '',
     photos: [] as VenuePhoto[],
   });
@@ -34,8 +34,6 @@ const VenueForm = () => {
         setFormData({
           name: venue.name,
           address: venue.address,
-          lat: venue.lat,
-          lng: venue.lng,
           nearestStation: venue.nearestStation || '',
           photos: venue.photos || [],
         });
@@ -47,9 +45,20 @@ const VenueForm = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const remainingSlots = MAX_PHOTOS - formData.photos.length;
+    if (remainingSlots <= 0) {
+      alert(`사진은 최대 ${MAX_PHOTOS}장까지만 추가할 수 있습니다.`);
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      alert(`사진은 최대 ${MAX_PHOTOS}장까지만 추가할 수 있습니다. ${remainingSlots}장만 업로드됩니다.`);
+    }
+
     setUploading(true);
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
+      const uploadPromises = filesToUpload.map(async (file) => {
         const formDataUpload = new FormData();
         formDataUpload.append('image', file);
         const response = await fetch('/api/upload', {
@@ -176,36 +185,13 @@ const VenueForm = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">위도 (lat)</label>
-              <input
-                type="number"
-                step="0.0001"
-                className="input-field"
-                value={formData.lat}
-                onChange={(e) => setFormData({ ...formData, lat: Number(e.target.value) })}
-                data-testid="input-venue-lat"
-              />
-            </div>
-            <div>
-              <label className="label">경도 (lng)</label>
-              <input
-                type="number"
-                step="0.0001"
-                className="input-field"
-                value={formData.lng}
-                onChange={(e) => setFormData({ ...formData, lng: Number(e.target.value) })}
-                data-testid="input-venue-lng"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-gray-500">
-            지도에서 위치를 표시하기 위해 위도/경도를 입력해주세요. 네이버 지도에서 해당 주소를 검색하면 URL에서 확인할 수 있습니다.
-          </p>
-
           <div>
-            <label className="label">웨딩홀 사진</label>
+            <label className="label">
+              웨딩홀 사진 
+              <span className="text-gray-400 font-normal ml-2">
+                ({formData.photos.length}/{MAX_PHOTOS})
+              </span>
+            </label>
             <input
               ref={fileInputRef}
               type="file"
@@ -238,22 +224,24 @@ const VenueForm = () => {
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="aspect-[4/3] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-blush-400 hover:text-blush-500 transition-colors disabled:opacity-50"
-                data-testid="button-add-photo"
-              >
-                {uploading ? (
-                  <FaSpinner className="text-xl animate-spin" />
-                ) : (
-                  <>
-                    <FaCamera className="text-xl" />
-                    <span className="text-xs">사진 추가</span>
-                  </>
-                )}
-              </button>
+              {formData.photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="aspect-[4/3] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-blush-400 hover:text-blush-500 transition-colors disabled:opacity-50"
+                  data-testid="button-add-photo"
+                >
+                  {uploading ? (
+                    <FaSpinner className="text-xl animate-spin" />
+                  ) : (
+                    <>
+                      <FaCamera className="text-xl" />
+                      <span className="text-xs">사진 추가</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <p className="text-xs text-gray-500 mt-2">
               웨딩홀 외관, 홀 내부, 로비 등의 사진을 추가하세요

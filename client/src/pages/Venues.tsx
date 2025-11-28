@@ -56,8 +56,11 @@ const Venues = () => {
 
   useEffect(() => {
     if (venues.length > 0 && !mapCenter) {
-      setMapCenter([venues[0].lat, venues[0].lng]);
-      setMapZoom(10);
+      const venueWithCoords = venues.find(v => v.lat && v.lng);
+      if (venueWithCoords && venueWithCoords.lat && venueWithCoords.lng) {
+        setMapCenter([venueWithCoords.lat, venueWithCoords.lng]);
+        setMapZoom(10);
+      }
     }
   }, [venues, mapCenter]);
 
@@ -102,8 +105,10 @@ const Venues = () => {
   const handleMarkerClick = (venue: WeddingVenue) => {
     setSelectedVenue(venue);
     setSelectedQuotes(getQuotesByVenueId(venue.id));
-    setMapCenter([venue.lat, venue.lng]);
-    setMapZoom(14);
+    if (venue.lat && venue.lng) {
+      setMapCenter([venue.lat, venue.lng]);
+      setMapZoom(14);
+    }
     setIsDrawerOpen(true);
   };
 
@@ -325,12 +330,12 @@ const Venues = () => {
             />
             <MapController center={mapCenter} zoom={mapZoom} />
             
-            {venues.map((venue) => {
+            {venues.filter(v => v.lat && v.lng).map((venue) => {
               const lowestEstimate = getLowestEstimate(venue.id);
               return (
                 <Marker
                   key={venue.id}
-                  position={[venue.lat, venue.lng]}
+                  position={[venue.lat!, venue.lng!]}
                   icon={customIcon}
                   eventHandlers={{
                     click: () => handleMarkerClick(venue),

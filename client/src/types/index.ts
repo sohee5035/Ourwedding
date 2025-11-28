@@ -9,8 +9,8 @@ export interface WeddingVenue {
   id: string;
   name: string;
   address: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   nearestStation: string; // 최인근 전철역
   photos: VenuePhoto[]; // Cloudinary 이미지 정보
   createdAt: string;
