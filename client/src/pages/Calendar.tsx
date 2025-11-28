@@ -347,43 +347,47 @@ const Calendar = () => {
           <p className="text-gray-600 mt-2">결혼 준비 주요 일정을 확인하세요</p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button
             onClick={() => setIsCategoryModalOpen(true)}
-            className="btn-secondary flex items-center gap-2"
+            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
             data-testid="button-manage-categories"
+            title="카테고리"
           >
-            <FaCog /> 카테고리
+            <FaCog className="text-lg" />
           </button>
           <button
             onClick={() => openAddEventModal()}
-            className="btn-primary flex items-center gap-2"
+            className="w-12 h-12 rounded-full bg-blush-400 text-white flex items-center justify-center shadow-lg hover:bg-blush-500 transition-colors"
             data-testid="button-add-event"
+            title="일정 추가"
           >
-            <FaPlus /> 일정 추가
+            <FaPlus className="text-xl" />
           </button>
-          <div className="flex bg-gray-100 p-1 rounded-lg">
+          <div className="flex bg-gray-100 p-1 rounded-full">
             <button
               onClick={() => setViewMode('calendar')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 viewMode === 'calendar' 
-                  ? 'bg-white text-blush-500 shadow-sm font-medium' 
+                  ? 'bg-white text-blush-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               data-testid="button-calendar-view"
+              title="달력"
             >
-              <FaCalendarAlt /> 달력
+              <FaCalendarAlt className="text-lg" />
             </button>
             <button
               onClick={() => setViewMode('timetable')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 viewMode === 'timetable' 
-                  ? 'bg-white text-blush-500 shadow-sm font-medium' 
+                  ? 'bg-white text-blush-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               data-testid="button-timetable-view"
+              title="타임테이블"
             >
-              <FaList /> 타임테이블
+              <FaList className="text-lg" />
             </button>
           </div>
         </div>
