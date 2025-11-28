@@ -127,15 +127,15 @@ const Calendar = () => {
     fetchCategories();
   }, [fetchItems, fetchVenues, fetchVenueQuotes, fetchEvents, fetchCategories]);
 
-  const allCategories = categories.length > 0 
-    ? categories 
-    : DEFAULT_CATEGORIES.map((cat, i) => ({ 
-        id: `default-${i}`, 
-        name: cat.name, 
-        color: cat.color, 
-        coupleId: '',
-        createdAt: new Date()
-      }));
+  const defaultCats = DEFAULT_CATEGORIES.map((cat, i) => ({ 
+    id: `default-${i}`, 
+    name: cat.name, 
+    color: cat.color, 
+    coupleId: '',
+    createdAt: new Date()
+  }));
+  
+  const allCategories = [...defaultCats, ...categories];
 
   const getCategoryInfo = (categoryName: string): { name: string; color: string } => {
     const found = allCategories.find(c => c.name === categoryName);
