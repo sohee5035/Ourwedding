@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { createHash } from "crypto";
+import { z } from "zod";
 import { 
   insertWeddingInfoSchema, 
   insertVenueSchema, 
@@ -10,6 +12,14 @@ import {
   insertGuestSchema,
   insertSharedNoteSchema
 } from "@shared/schema";
+
+function hashPin(pin: string): string {
+  return createHash('sha256').update(pin).digest('hex');
+}
+
+function generateInviteCode(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Wedding Info
@@ -286,6 +296,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  // Auth - Register (first member creates couple)
+  const registerSchema = z.object({
+    name: z.string().min(1),
+    pin: z.string().length(4).regex(/^\d{4}$/),
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { name, pin } = registerSchema.parse(req.body);
+      
+      const existingMember = await storage.getMemberByName(name);
+      if (existingMember) {
+        return res.status(400).json({ error: "이미 사용 중인 이름입니다" });
+      }
+      
+      const inviteCode = generateInviteCode();
+      const couple = await storage.createCouple({ inviteCode });
+      
+      const pinHash = hashPin(pin);
+      const member = await storage.createMember({
+        coupleId: couple.id,
+        name,
+        pinHash,
+      });
+      
+      req.session.memberId = member.id;
+      req.session.coupleId = couple.id;
+      
+      res.status(201).json({
+        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        couple: { id: couple.id, inviteCode: couple.inviteCode },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: "가입에 실패했습니다" });
+    }
+  });
+
+  // Auth - Join (second member joins with invite code)
+  const joinSchema = z.object({
+    name: z.string().min(1),
+    pin: z.string().length(4).regex(/^\d{4}$/),
+    inviteCode: z.string().length(6),
+  });
+
+  app.post("/api/auth/join", async (req, res) => {
+    try {
+      const { name, pin, inviteCode } = joinSchema.parse(req.body);
+      
+      const couple = await storage.getCoupleByInviteCode(inviteCode.toUpperCase());
+      if (!couple) {
+        return res.status(400).json({ error: "잘못된 초대 코드입니다" });
+      }
+      
+      const existingMembers = await storage.getMembersByCouple(couple.id);
+      if (existingMembers.length >= 2) {
+        return res.status(400).json({ error: "이미 커플이 완성되었습니다" });
+      }
+      
+      const existingMember = await storage.getMemberByName(name);
+      if (existingMember) {
+        return res.status(400).json({ error: "이미 사용 중인 이름입니다" });
+      }
+      
+      const pinHash = hashPin(pin);
+      const member = await storage.createMember({
+        coupleId: couple.id,
+        name,
+        pinHash,
+      });
+      
+      req.session.memberId = member.id;
+      req.session.coupleId = couple.id;
+      
+      res.status(201).json({
+        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        couple: { id: couple.id },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: "합류에 실패했습니다" });
+    }
+  });
+
+  // Auth - Login
+  const loginSchema = z.object({
+    name: z.string().min(1),
+    pin: z.string().length(4).regex(/^\d{4}$/),
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { name, pin } = loginSchema.parse(req.body);
+      
+      const member = await storage.getMemberByName(name);
+      if (!member) {
+        return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
+      }
+      
+      const pinHash = hashPin(pin);
+      if (member.pinHash !== pinHash) {
+        return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
+      }
+      
+      req.session.memberId = member.id;
+      req.session.coupleId = member.coupleId;
+      
+      const couple = member.coupleId ? await storage.getCouple(member.coupleId) : null;
+      
+      res.json({
+        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: "로그인에 실패했습니다" });
+    }
+  });
+
+  // Auth - Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "로그아웃에 실패했습니다" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  // Auth - Get current session
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.memberId) {
+        return res.json({ member: null, couple: null, partner: null });
+      }
+      
+      const member = await storage.getMember(req.session.memberId);
+      if (!member) {
+        return res.json({ member: null, couple: null, partner: null });
+      }
+      
+      const couple = member.coupleId ? await storage.getCouple(member.coupleId) : null;
+      const members = member.coupleId ? await storage.getMembersByCouple(member.coupleId) : [];
+      const partner = members.find(m => m.id !== member.id);
+      
+      res.json({
+        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
+        partner: partner ? { id: partner.id, name: partner.name } : null,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "세션 정보를 가져오는데 실패했습니다" });
     }
   });
 

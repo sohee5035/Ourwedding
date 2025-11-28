@@ -6,10 +6,12 @@ import {
   type BudgetItem, type InsertBudgetItem,
   type Guest, type InsertGuest,
   type SharedNote, type InsertSharedNote,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes
+  type Couple, type InsertCouple,
+  type Member, type InsertMember,
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Wedding Info
@@ -51,8 +53,21 @@ export interface IStorage {
 
   // Shared Notes
   getSharedNotes(): Promise<SharedNote[]>;
+  getSharedNotesByCoupleId(coupleId: string): Promise<SharedNote[]>;
   createSharedNote(note: InsertSharedNote): Promise<SharedNote>;
   deleteSharedNote(id: string): Promise<void>;
+
+  // Couples
+  createCouple(couple: InsertCouple): Promise<Couple>;
+  getCouple(id: string): Promise<Couple | undefined>;
+  getCoupleByInviteCode(inviteCode: string): Promise<Couple | undefined>;
+  regenerateInviteCode(coupleId: string): Promise<Couple>;
+
+  // Members
+  createMember(member: InsertMember): Promise<Member>;
+  getMember(id: string): Promise<Member | undefined>;
+  getMemberByName(name: string): Promise<Member | undefined>;
+  getMembersByCouple(coupleId: string): Promise<Member[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -215,6 +230,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(sharedNotes).orderBy(sharedNotes.createdAt);
   }
 
+  async getSharedNotesByCoupleId(coupleId: string): Promise<SharedNote[]> {
+    return await db.select().from(sharedNotes).where(eq(sharedNotes.coupleId, coupleId)).orderBy(sharedNotes.createdAt);
+  }
+
   async createSharedNote(note: InsertSharedNote): Promise<SharedNote> {
     const [created] = await db.insert(sharedNotes).values(note).returning();
     return created;
@@ -222,6 +241,52 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSharedNote(id: string): Promise<void> {
     await db.delete(sharedNotes).where(eq(sharedNotes.id, id));
+  }
+
+  // Couples
+  async createCouple(couple: InsertCouple): Promise<Couple> {
+    const [created] = await db.insert(couples).values(couple).returning();
+    return created;
+  }
+
+  async getCouple(id: string): Promise<Couple | undefined> {
+    const [couple] = await db.select().from(couples).where(eq(couples.id, id));
+    return couple || undefined;
+  }
+
+  async getCoupleByInviteCode(inviteCode: string): Promise<Couple | undefined> {
+    const [couple] = await db.select().from(couples).where(eq(couples.inviteCode, inviteCode));
+    return couple || undefined;
+  }
+
+  async regenerateInviteCode(coupleId: string): Promise<Couple> {
+    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const [updated] = await db
+      .update(couples)
+      .set({ inviteCode: newCode })
+      .where(eq(couples.id, coupleId))
+      .returning();
+    return updated;
+  }
+
+  // Members
+  async createMember(member: InsertMember): Promise<Member> {
+    const [created] = await db.insert(members).values(member).returning();
+    return created;
+  }
+
+  async getMember(id: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.id, id));
+    return member || undefined;
+  }
+
+  async getMemberByName(name: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.name, name));
+    return member || undefined;
+  }
+
+  async getMembersByCouple(coupleId: string): Promise<Member[]> {
+    return await db.select().from(members).where(eq(members.coupleId, coupleId));
   }
 }
 
