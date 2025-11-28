@@ -218,11 +218,6 @@ const Home = () => {
                     : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
                 }`}
               >
-                {!isMyNote(note.author) && (
-                  <p className={`text-xs font-semibold mb-1 ${getAuthorColor(note.author)} inline-block px-2 py-0.5 rounded-full`}>
-                    {note.author}
-                  </p>
-                )}
                 <p className={`text-sm leading-relaxed ${isMyNote(note.author) ? 'text-white' : 'text-gray-800'}`}>
                   {note.content}
                 </p>
