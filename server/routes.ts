@@ -448,19 +448,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin - Login
   const adminLoginSchema = z.object({
-    username: z.string().min(1),
     password: z.string().min(1),
   });
 
   app.post("/api/admin/login", (req, res) => {
     try {
-      const { username, password } = adminLoginSchema.parse(req.body);
+      const { password } = adminLoginSchema.parse(req.body);
       
-      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+      const adminPassword = process.env.ADMIN_PASSWORD || '1122';
       
-      if (username !== adminUsername || password !== adminPassword) {
-        return res.status(401).json({ error: "관리자 인증에 실패했습니다" });
+      if (password !== adminPassword) {
+        return res.status(401).json({ error: "비밀번호가 일치하지 않습니다" });
       }
       
       req.session.isAdmin = true;

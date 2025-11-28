@@ -17,7 +17,6 @@ interface CoupleWithMembers {
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [couples, setCouples] = useState<CoupleWithMembers[]>([]);
@@ -62,7 +61,7 @@ const Admin = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ password }),
       });
       
       if (res.ok) {
@@ -161,25 +160,13 @@ const Admin = () => {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">아이디</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="관리자 아이디"
-                  data-testid="input-admin-username"
-                />
-              </div>
-              
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
                 <input
                   type="password"
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호"
+                  placeholder="비밀번호 입력"
                   data-testid="input-admin-password"
                 />
               </div>
