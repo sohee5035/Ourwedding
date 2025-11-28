@@ -303,11 +303,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const registerSchema = z.object({
     name: z.string().min(1),
     pin: z.string().length(4).regex(/^\d{4}$/),
+    role: z.enum(['bride', 'groom']),
   });
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { name, pin } = registerSchema.parse(req.body);
+      const { name, pin, role } = registerSchema.parse(req.body);
       
       const inviteCode = generateInviteCode();
       const couple = await storage.createCouple({ inviteCode });
@@ -317,13 +318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         coupleId: couple.id,
         name,
         pinHash,
+        role,
       });
       
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
       
       res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
         couple: { id: couple.id, inviteCode: couple.inviteCode },
       });
     } catch (error) {
@@ -358,18 +360,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "같은 커플 내에 동일한 이름이 있습니다" });
       }
       
+      const firstMemberRole = existingMembers[0]?.role || 'bride';
+      const role = firstMemberRole === 'bride' ? 'groom' : 'bride';
+      
       const pinHash = hashPin(pin);
       const member = await storage.createMember({
         coupleId: couple.id,
         name,
         pinHash,
+        role,
       });
       
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
       
       res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
         couple: { id: couple.id },
       });
     } catch (error) {
@@ -436,9 +442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const partner = members.find(m => m.id !== member.id);
       
       res.json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId },
+        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
         couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
-        partner: partner ? { id: partner.id, name: partner.name } : null,
+        partner: partner ? { id: partner.id, name: partner.name, role: partner.role } : null,
       });
     } catch (error) {
       console.error(error);

@@ -14,6 +14,7 @@ export const members = pgTable("members", {
   coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   pinHash: text("pin_hash").notNull(),
+  role: text("role").notNull().default('bride'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
