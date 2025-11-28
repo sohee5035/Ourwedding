@@ -446,6 +446,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Login
+  const adminLoginSchema = z.object({
+    username: z.string().min(1),
+    password: z.string().min(1),
+  });
+
+  app.post("/api/admin/login", (req, res) => {
+    try {
+      const { username, password } = adminLoginSchema.parse(req.body);
+      
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+      
+      if (username !== adminUsername || password !== adminPassword) {
+        return res.status(401).json({ error: "관리자 인증에 실패했습니다" });
+      }
+      
+      req.session.isAdmin = true;
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "로그인에 실패했습니다" });
+    }
+  });
+
+  app.post("/api/admin/logout", (req, res) => {
+    req.session.isAdmin = false;
+    res.json({ success: true });
+  });
+
+  app.get("/api/admin/me", (req, res) => {
+    res.json({ isAdmin: !!req.session.isAdmin });
+  });
+
+  // Admin - Get all couples with members
+  app.get("/api/admin/couples", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ error: "관리자 권한이 필요합니다" });
+    }
+    
+    try {
+      const allCouples = await storage.getAllCouples();
+      const allMembers = await storage.getAllMembers();
+      
+      const couplesWithMembers = allCouples.map(couple => ({
+        ...couple,
+        members: allMembers.filter(m => m.coupleId === couple.id).map(m => ({
+          id: m.id,
+          name: m.name,
+          createdAt: m.createdAt,
+        })),
+      }));
+      
+      res.json(couplesWithMembers);
+    } catch (error) {
+      res.status(500).json({ error: "데이터를 가져오는데 실패했습니다" });
+    }
+  });
+
+  // Admin - Delete couple (and all members)
+  app.delete("/api/admin/couples/:id", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ error: "관리자 권한이 필요합니다" });
+    }
+    
+    try {
+      await storage.deleteCouple(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "삭제에 실패했습니다" });
+    }
+  });
+
+  // Admin - Delete member
+  app.delete("/api/admin/members/:id", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ error: "관리자 권한이 필요합니다" });
+    }
+    
+    try {
+      await storage.deleteMember(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "삭제에 실패했습니다" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Switch } from 'wouter';
+import { Route, Switch, useLocation } from 'wouter';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Map from './pages/Map';
@@ -11,14 +11,20 @@ import Checklist from './pages/Checklist';
 import Budget from './pages/Budget';
 import Guests from './pages/Guests';
 import Auth from './pages/Auth';
+import Admin from './pages/Admin';
 import { useAuthStore } from './store/authStore';
 
 function App() {
   const { isLoading, isAuthenticated, checkAuth } = useAuthStore();
+  const [location] = useLocation();
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  if (location === '/admin') {
+    return <Admin />;
+  }
 
   if (isLoading) {
     return (

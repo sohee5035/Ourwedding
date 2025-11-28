@@ -9,6 +9,7 @@ declare module "express-session" {
   interface SessionData {
     memberId: string;
     coupleId: string | null;
+    isAdmin: boolean;
   }
 }
 

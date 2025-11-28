@@ -69,6 +69,12 @@ export interface IStorage {
   getMemberByNameAndPinHash(name: string, pinHash: string): Promise<Member | undefined>;
   getMembersByCouple(coupleId: string): Promise<Member[]>;
   getMemberByNameInCouple(coupleId: string, name: string): Promise<Member | undefined>;
+  
+  // Admin
+  getAllCouples(): Promise<Couple[]>;
+  getAllMembers(): Promise<Member[]>;
+  deleteCouple(id: string): Promise<void>;
+  deleteMember(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -297,6 +303,23 @@ export class DatabaseStorage implements IStorage {
       and(eq(members.coupleId, coupleId), eq(members.name, name))
     );
     return member || undefined;
+  }
+
+  // Admin
+  async getAllCouples(): Promise<Couple[]> {
+    return await db.select().from(couples).orderBy(couples.createdAt);
+  }
+
+  async getAllMembers(): Promise<Member[]> {
+    return await db.select().from(members).orderBy(members.createdAt);
+  }
+
+  async deleteCouple(id: string): Promise<void> {
+    await db.delete(couples).where(eq(couples.id, id));
+  }
+
+  async deleteMember(id: string): Promise<void> {
+    await db.delete(members).where(eq(members.id, id));
   }
 }
 
