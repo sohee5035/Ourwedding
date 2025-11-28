@@ -3,6 +3,20 @@ import { pgTable, text, varchar, integer, boolean, timestamp, real } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const couples = pgTable("couples", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inviteCode: varchar("invite_code", { length: 6 }).unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const members = pgTable("members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  pinHash: text("pin_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const weddingInfo = pgTable("wedding_info", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   weddingDate: text("wedding_date"),
@@ -75,12 +89,24 @@ export const guests = pgTable("guests", {
 
 export const sharedNotes = pgTable("shared_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
+  memberId: varchar("member_id").references(() => members.id, { onDelete: 'set null' }),
   author: text("author").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert Schemas
+export const insertCoupleSchema = createInsertSchema(couples).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMemberSchema = createInsertSchema(members).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertWeddingInfoSchema = createInsertSchema(weddingInfo).omit({
   id: true,
   createdAt: true,
@@ -121,6 +147,12 @@ export const insertSharedNoteSchema = createInsertSchema(sharedNotes).omit({
 });
 
 // Types
+export type InsertCouple = z.infer<typeof insertCoupleSchema>;
+export type Couple = typeof couples.$inferSelect;
+
+export type InsertMember = z.infer<typeof insertMemberSchema>;
+export type Member = typeof members.$inferSelect;
+
 export type InsertWeddingInfo = z.infer<typeof insertWeddingInfoSchema>;
 export type WeddingInfo = typeof weddingInfo.$inferSelect;
 
