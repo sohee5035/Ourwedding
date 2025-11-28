@@ -776,10 +776,10 @@ const Guests = () => {
                     data-testid={`guest-row-${guest.id}`}
                   >
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-800">{guest.name}</span>
                         {guest.invitationSent && (
-                          <span className="w-2 h-2 rounded-full bg-purple-400" title="청첩장 발송"></span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-600">청첩장</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-400 md:hidden">
