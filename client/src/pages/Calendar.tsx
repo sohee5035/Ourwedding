@@ -74,17 +74,6 @@ const Calendar = () => {
     setSelectedQuote(null);
   };
 
-  const timetableData = [
-    { time: '07:00', title: '메이크업 샵 도착', category: '메이크업' },
-    { time: '10:00', title: '메이크업 아웃 & 웨딩홀 이동', category: '이동' },
-    { time: '11:00', title: '웨딩홀 도착 & 리허설', category: '웨딩홀' },
-    { time: '11:30', title: '신부대기실 입장', category: '웨딩홀' },
-    { time: '12:30', title: '본식 시작', category: '본식' },
-    { time: '13:20', title: '원판 사진 촬영', category: '촬영' },
-    { time: '13:40', title: '연회장 이동 및 인사', category: '피로연' },
-    { time: '15:00', title: '정산 및 마무리', category: '정산' },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -225,73 +214,14 @@ const Calendar = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="card">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800">예식 당일 타임테이블 (예시)</h2>
-                <button className="text-sm text-blush-500 hover:text-blush-600 font-medium">
-                  + 일정 추가
-                </button>
-              </div>
-              
-              <div className="relative border-l-2 border-blush-200 ml-3 space-y-8 py-2">
-                {timetableData.map((item, index) => (
-                  <div key={index} className="relative pl-8">
-                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-blush-400"></div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                      <span className="font-bold text-blush-500 w-16">{item.time}</span>
-                      <div className="flex-1 bg-gray-50 p-3 rounded-lg border border-gray-100 hover:border-blush-200 transition-colors">
-                        <h3 className="font-medium text-gray-800">{item.title}</h3>
-                        <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200 mt-1 inline-block">
-                          {item.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="card flex flex-col items-center justify-center py-16">
+          <div className="w-16 h-16 bg-blush-100 rounded-full flex items-center justify-center mb-4">
+            <FaList className="text-2xl text-blush-400" />
           </div>
-
-          <div className="space-y-6">
-            <div className="card bg-blush-50 border-blush-100">
-              <h3 className="font-bold text-gray-800 mb-2">💡 타임테이블 팁</h3>
-              <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside">
-                <li>이동 시간은 여유 있게 30분 정도 더 잡아주세요.</li>
-                <li>식사 시간은 하객들이 몰리는 시간을 고려하세요.</li>
-                <li>가방순이 친구에게는 별도의 시간표를 전달해주세요.</li>
-              </ul>
-            </div>
-
-            {datedQuotes.length > 0 && (
-              <div className="card">
-                <h3 className="font-bold text-gray-800 mb-3">📍 예정된 웨딩홀 방문</h3>
-                <div className="space-y-2">
-                  {datedQuotes.map(quote => {
-                    const venue = getVenueById(quote.venueId);
-                    return (
-                      <button
-                        key={quote.id}
-                        onClick={() => handleQuoteClick(quote)}
-                        className="w-full text-left p-3 bg-gradient-to-r from-ivory-50 to-blush-50 rounded-lg border border-blush-100 hover:border-blush-300 transition-colors"
-                        data-testid={`sidebar-quote-${quote.id}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <FaMapMarkerAlt className="text-blush-500" />
-                          <span className="font-medium text-gray-800">{venue?.name || '웨딩홀'}</span>
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          {quote.date && format(parseISO(quote.date), 'M월 d일 (EEE)', { locale: ko })}
-                          {quote.time && ` ${quote.time}`}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+          <h2 className="text-xl font-bold text-gray-700 mb-2">준비중입니다</h2>
+          <p className="text-gray-500 text-center">
+            예식 당일 타임테이블 기능을<br />열심히 준비하고 있어요!
+          </p>
         </div>
       )}
 
