@@ -936,81 +936,81 @@ const Calendar = () => {
       </Dialog>
 
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="max-w-xs mx-4">
+        <DialogContent className="max-w-[280px]">
           <DialogHeader>
-            <DialogTitle>카테고리 관리</DialogTitle>
+            <DialogTitle className="text-base">카테고리 관리</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">새 카테고리 추가</label>
-              <div className="flex gap-2">
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-gray-700">새 카테고리 추가</label>
+              <div className="flex gap-1.5">
                 <input
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="카테고리 이름"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                  className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
                   data-testid="input-new-category-name"
                 />
                 <button
                   onClick={handleAddCategory}
                   disabled={!newCategoryName.trim()}
-                  className="btn-primary px-4 disabled:opacity-50"
+                  className="btn-primary px-3 py-1.5 disabled:opacity-50"
                   data-testid="button-add-category"
                 >
-                  <FaPlus />
+                  <FaPlus className="text-sm" />
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">색상 선택</label>
-              <div className="grid grid-cols-9 gap-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">색상 선택</label>
+              <div className="grid grid-cols-6 gap-1.5">
                 {COLOR_PALETTE.map(color => (
                   <button
                     key={color.name}
                     type="button"
                     onClick={() => setNewCategoryColor(color.name)}
-                    className={`w-8 h-8 rounded-full ${color.bg} flex items-center justify-center transition-transform ${
-                      newCategoryColor === color.name ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-105'
+                    className={`w-7 h-7 rounded-full ${color.bg} flex items-center justify-center transition-transform ${
+                      newCategoryColor === color.name ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : 'hover:scale-105'
                     }`}
                     data-testid={`button-color-${color.name}`}
                   >
                     {newCategoryColor === color.name && (
-                      <FaHeart className="text-white text-xs" />
+                      <FaHeart className="text-white text-[10px]" />
                     )}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="border-t pt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">현재 카테고리</label>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            <div className="border-t pt-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">현재 카테고리</label>
+              <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                 {allCategories.map(cat => {
                   const colorClasses = getColorClasses(cat.color);
                   const isDefault = cat.id.startsWith('default-');
                   return (
                     <div
                       key={cat.id}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-1.5 bg-gray-50 rounded-lg"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full ${colorClasses.bg} flex items-center justify-center`}>
-                          <FaHeart className="text-white text-xs" />
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded-full ${colorClasses.bg} flex items-center justify-center`}>
+                          <FaHeart className="text-white text-[8px]" />
                         </div>
-                        <span className="text-sm text-gray-700">{cat.name}</span>
+                        <span className="text-xs text-gray-700">{cat.name}</span>
                         {isDefault && (
-                          <span className="text-xs text-gray-400">(기본)</span>
+                          <span className="text-[10px] text-gray-400">(기본)</span>
                         )}
                       </div>
                       {!isDefault && (
                         <button
                           onClick={() => handleDeleteCategory(cat.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-white"
+                          className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-white"
                           data-testid={`button-delete-category-${cat.id}`}
                         >
-                          <FaTrash className="text-xs" />
+                          <FaTrash className="text-[10px]" />
                         </button>
                       )}
                     </div>
@@ -1019,10 +1019,10 @@ const Calendar = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-1">
               <button
                 onClick={() => setIsCategoryModalOpen(false)}
-                className="btn-primary"
+                className="btn-primary text-sm px-4 py-1.5"
                 data-testid="button-close-category-modal"
               >
                 완료
