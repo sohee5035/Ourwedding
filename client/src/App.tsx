@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
-import Map from './pages/Map';
 import Venues from './pages/Venues';
 import VenueForm from './pages/VenueForm';
 import QuoteForm from './pages/QuoteForm';
@@ -45,7 +44,6 @@ function App() {
     <Layout>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/map" component={Map} />
         <Route path="/venues" component={Venues} />
         <Route path="/venues/add" component={VenueForm} />
         <Route path="/venues/edit/:id" component={VenueForm} />

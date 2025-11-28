@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'wouter';
 import {
-  FaMapMarkedAlt,
   FaListUl,
   FaCheckSquare,
   FaMoneyBillWave,
@@ -63,18 +62,6 @@ const Navigation = () => {
                   </Link>
                 );
               })}
-              <Link
-                href="/map"
-                className={`flex items-center space-x-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
-                  location === '/map'
-                    ? 'bg-blush-50 text-blush-600 font-semibold shadow-sm ring-1 ring-blush-100'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-blush-500'
-                }`}
-              >
-                <FaMapMarkedAlt className={`text-lg ${location === '/map' ? 'text-blush-500' : 'text-gray-400'}`} />
-                <span className="text-sm">지도</span>
-              </Link>
-              
               <div className="border-l border-gray-200 h-8 mx-2"></div>
               
               <button
