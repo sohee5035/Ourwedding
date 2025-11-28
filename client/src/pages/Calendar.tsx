@@ -59,24 +59,24 @@ interface QuoteWithVenue extends VenueQuote {
 }
 
 const COLOR_PALETTE = [
-  { name: 'pink', bg: 'bg-pink-400', text: 'text-pink-600' },
-  { name: 'rose', bg: 'bg-rose-400', text: 'text-rose-600' },
-  { name: 'red', bg: 'bg-red-400', text: 'text-red-600' },
-  { name: 'orange', bg: 'bg-orange-400', text: 'text-orange-600' },
-  { name: 'amber', bg: 'bg-amber-400', text: 'text-amber-600' },
-  { name: 'yellow', bg: 'bg-yellow-400', text: 'text-yellow-600' },
-  { name: 'lime', bg: 'bg-lime-400', text: 'text-lime-600' },
-  { name: 'green', bg: 'bg-green-400', text: 'text-green-600' },
-  { name: 'emerald', bg: 'bg-emerald-400', text: 'text-emerald-600' },
-  { name: 'teal', bg: 'bg-teal-400', text: 'text-teal-600' },
-  { name: 'cyan', bg: 'bg-cyan-400', text: 'text-cyan-600' },
-  { name: 'sky', bg: 'bg-sky-400', text: 'text-sky-600' },
-  { name: 'blue', bg: 'bg-blue-400', text: 'text-blue-600' },
-  { name: 'indigo', bg: 'bg-indigo-400', text: 'text-indigo-600' },
-  { name: 'violet', bg: 'bg-violet-400', text: 'text-violet-600' },
-  { name: 'purple', bg: 'bg-purple-400', text: 'text-purple-600' },
-  { name: 'fuchsia', bg: 'bg-fuchsia-400', text: 'text-fuchsia-600' },
-  { name: 'gray', bg: 'bg-gray-400', text: 'text-gray-600' },
+  { name: 'pink', bg: 'bg-pink-400', bgLight: 'bg-pink-50', text: 'text-pink-500' },
+  { name: 'rose', bg: 'bg-rose-400', bgLight: 'bg-rose-50', text: 'text-rose-500' },
+  { name: 'red', bg: 'bg-red-400', bgLight: 'bg-red-50', text: 'text-red-500' },
+  { name: 'orange', bg: 'bg-orange-400', bgLight: 'bg-orange-50', text: 'text-orange-500' },
+  { name: 'amber', bg: 'bg-amber-400', bgLight: 'bg-amber-50', text: 'text-amber-500' },
+  { name: 'yellow', bg: 'bg-yellow-400', bgLight: 'bg-yellow-50', text: 'text-yellow-500' },
+  { name: 'lime', bg: 'bg-lime-400', bgLight: 'bg-lime-50', text: 'text-lime-500' },
+  { name: 'green', bg: 'bg-green-400', bgLight: 'bg-green-50', text: 'text-green-500' },
+  { name: 'emerald', bg: 'bg-emerald-400', bgLight: 'bg-emerald-50', text: 'text-emerald-500' },
+  { name: 'teal', bg: 'bg-teal-400', bgLight: 'bg-teal-50', text: 'text-teal-500' },
+  { name: 'cyan', bg: 'bg-cyan-400', bgLight: 'bg-cyan-50', text: 'text-cyan-500' },
+  { name: 'sky', bg: 'bg-sky-400', bgLight: 'bg-sky-50', text: 'text-sky-500' },
+  { name: 'blue', bg: 'bg-blue-400', bgLight: 'bg-blue-50', text: 'text-blue-500' },
+  { name: 'indigo', bg: 'bg-indigo-400', bgLight: 'bg-indigo-50', text: 'text-indigo-500' },
+  { name: 'violet', bg: 'bg-violet-400', bgLight: 'bg-violet-50', text: 'text-violet-500' },
+  { name: 'purple', bg: 'bg-purple-400', bgLight: 'bg-purple-50', text: 'text-purple-500' },
+  { name: 'fuchsia', bg: 'bg-fuchsia-400', bgLight: 'bg-fuchsia-50', text: 'text-fuchsia-500' },
+  { name: 'gray', bg: 'bg-gray-400', bgLight: 'bg-gray-50', text: 'text-gray-500' },
 ];
 
 const DEFAULT_CATEGORIES = [
@@ -463,7 +463,7 @@ const Calendar = () => {
                             <button
                               key={event.id}
                               onClick={() => openViewEventModal(event)}
-                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bg} bg-opacity-10 hover:bg-opacity-15 transition-colors`}
+                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bgLight} hover:opacity-80 transition-colors`}
                               title={event.title}
                               data-testid={`calendar-event-${event.id}`}
                             >
@@ -562,7 +562,7 @@ const Calendar = () => {
                     <button
                       key={`event-${event.id}`}
                       onClick={() => openViewEventModal(event)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl ${colorClasses.bg} bg-opacity-[0.05] hover:bg-opacity-10 transition-colors text-left`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl ${colorClasses.bgLight} hover:opacity-80 transition-colors text-left`}
                       data-testid={`upcoming-event-${event.id}`}
                     >
                       <div className={`w-10 h-10 rounded-lg ${colorClasses.bg} bg-opacity-30 flex items-center justify-center`}>
@@ -946,7 +946,7 @@ const Calendar = () => {
                   </div>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className={`${colorClasses.bg} bg-opacity-[0.05] rounded-xl p-4`}>
+                  <div className={`${colorClasses.bgLight} rounded-xl p-4`}>
                     <div className="flex items-center gap-2 text-gray-600 mb-2">
                       <FaCalendarAlt className={colorClasses.text} />
                       <span className="font-medium">일정</span>
