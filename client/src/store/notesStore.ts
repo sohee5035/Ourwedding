@@ -6,6 +6,7 @@ interface NotesState {
   isLoading: boolean;
   fetchNotes: () => Promise<void>;
   addNote: (note: InsertSharedNote) => Promise<void>;
+  updateNote: (id: string, content: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
 }
 
@@ -42,6 +43,23 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to add note:', error);
+    }
+  },
+
+  updateNote: async (id: string, content: string) => {
+    try {
+      const response = await fetch(`/api/notes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
+      if (response.ok) {
+        const updatedNote = await response.json();
+        set({ notes: get().notes.map((n) => (n.id === id ? updatedNote : n)) });
+      }
+    } catch (error) {
+      console.error('Failed to update note:', error);
     }
   },
 

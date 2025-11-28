@@ -1,14 +1,14 @@
 import { useWeddingInfoStore } from '../store/weddingInfoStore';
 import { useNotesStore } from '../store/notesStore';
 import { useAuthStore } from '../store/authStore';
-import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck, FaPen } from 'react-icons/fa';
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
-  const { notes, fetchNotes, addNote, deleteNote, isLoading } = useNotesStore();
+  const { notes, fetchNotes, addNote, updateNote, deleteNote, isLoading } = useNotesStore();
   const { member, couple, partner } = useAuthStore();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -16,6 +16,9 @@ const Home = () => {
     weddingDate: weddingInfo.weddingDate || '',
     totalBudget: weddingInfo.totalBudget || 0,
   });
+  
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteContent, setEditingNoteContent] = useState('');
 
   const getGroomName = () => {
     if (member?.role === 'groom') return member.name;
@@ -80,16 +83,21 @@ const Home = () => {
     }
   };
 
-  const getAuthorColor = (name: string) => {
-    const colors = [
-      'bg-blush-100 text-blush-700',
-      'bg-lavender-100 text-lavender-700',
-      'bg-gold-100 text-gold-700',
-      'bg-rose-100 text-rose-700',
-      'bg-purple-100 text-purple-700',
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
+  const handleStartEdit = (note: { id: string; content: string }) => {
+    setEditingNoteId(note.id);
+    setEditingNoteContent(note.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setEditingNoteContent('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNoteId || !editingNoteContent.trim()) return;
+    await updateNote(editingNoteId, editingNoteContent.trim());
+    setEditingNoteId(null);
+    setEditingNoteContent('');
   };
 
   const isMyNote = (author: string) => {
@@ -214,27 +222,67 @@ const Home = () => {
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                   isMyNote(note.author)
-                    ? 'bg-blush-400 text-white rounded-br-sm'
-                    : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
+                    ? 'bg-gray-200 rounded-br-sm'
+                    : 'bg-gray-100 rounded-bl-sm'
                 }`}
               >
-                <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isMyNote(note.author) ? 'text-white' : 'text-gray-800'}`}>
-                  {note.content}
-                </p>
-                <div className="flex items-center justify-between mt-2 gap-2">
-                  <p className={`text-xs ${isMyNote(note.author) ? 'text-blush-100' : 'text-gray-400'}`}>
-                    {note.createdAt && format(new Date(note.createdAt), 'M/d a h:mm', { locale: ko })}
-                  </p>
-                  {isMyNote(note.author) && (
-                    <button
-                      onClick={() => deleteNote(note.id)}
-                      className="text-blush-200 hover:text-white transition-colors"
-                      data-testid={`button-delete-note-${note.id}`}
-                    >
-                      <FaTrash className="text-xs" />
-                    </button>
-                  )}
-                </div>
+                {editingNoteId === note.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      className="w-full p-2 rounded-lg border border-gray-300 text-sm text-gray-800 resize-none"
+                      value={editingNoteContent}
+                      onChange={(e) => setEditingNoteContent(e.target.value)}
+                      rows={3}
+                      autoFocus
+                      data-testid={`textarea-edit-note-${note.id}`}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={handleCancelEdit}
+                        className="text-xs px-3 py-1 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
+                        data-testid={`button-cancel-edit-${note.id}`}
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="text-xs px-3 py-1 rounded bg-blush-500 text-white hover:bg-blush-600"
+                        data-testid={`button-save-edit-${note.id}`}
+                      >
+                        저장
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+                      {note.content}
+                    </p>
+                    <div className="flex items-center justify-between mt-2 gap-2">
+                      <p className="text-xs text-gray-500">
+                        {note.createdAt && format(new Date(note.createdAt), 'M/d a h:mm', { locale: ko })}
+                      </p>
+                      {isMyNote(note.author) && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleStartEdit(note)}
+                            className="text-gray-500 hover:text-gray-700 transition-colors"
+                            data-testid={`button-edit-note-${note.id}`}
+                          >
+                            <FaPen className="text-xs" />
+                          </button>
+                          <button
+                            onClick={() => deleteNote(note.id)}
+                            className="text-gray-500 hover:text-red-500 transition-colors"
+                            data-testid={`button-delete-note-${note.id}`}
+                          >
+                            <FaTrash className="text-xs" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))

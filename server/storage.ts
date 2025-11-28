@@ -55,6 +55,7 @@ export interface IStorage {
   getSharedNotes(): Promise<SharedNote[]>;
   getSharedNotesByCoupleId(coupleId: string): Promise<SharedNote[]>;
   createSharedNote(note: InsertSharedNote): Promise<SharedNote>;
+  updateSharedNote(id: string, content: string): Promise<SharedNote>;
   deleteSharedNote(id: string): Promise<void>;
 
   // Couples
@@ -244,6 +245,15 @@ export class DatabaseStorage implements IStorage {
   async createSharedNote(note: InsertSharedNote): Promise<SharedNote> {
     const [created] = await db.insert(sharedNotes).values(note).returning();
     return created;
+  }
+
+  async updateSharedNote(id: string, content: string): Promise<SharedNote> {
+    const [updated] = await db
+      .update(sharedNotes)
+      .set({ content })
+      .where(eq(sharedNotes.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteSharedNote(id: string): Promise<void> {

@@ -290,6 +290,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/notes/:id", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      const note = await storage.updateSharedNote(req.params.id, content);
+      res.json(note);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update note" });
+    }
+  });
+
   app.delete("/api/notes/:id", async (req, res) => {
     try {
       await storage.deleteSharedNote(req.params.id);
