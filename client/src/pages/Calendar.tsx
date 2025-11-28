@@ -937,36 +937,36 @@ const Calendar = () => {
 
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
         <DialogContent className="!w-auto !max-w-none p-5">
-          <div className="w-[222px]">
+          <div className="w-[260px]">
             <DialogHeader className="text-left p-0 mb-3">
               <DialogTitle className="text-base">카테고리 관리</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-medium text-gray-700">새 카테고리 추가</label>
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="카테고리 이름"
-                    className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
+                    className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blush-300 focus:border-blush-400"
                     data-testid="input-new-category-name"
                   />
                   <button
                     onClick={handleAddCategory}
                     disabled={!newCategoryName.trim()}
-                    className="btn-primary px-2 py-1.5 disabled:opacity-50 shrink-0"
+                    className="btn-primary px-3 py-2 disabled:opacity-50 shrink-0"
                     data-testid="button-add-category"
                   >
-                    <FaPlus className="text-xs" />
+                    <FaPlus className="text-sm" />
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">색상 선택</label>
-                <div className="grid grid-cols-6 gap-1.5">
+                <label className="block text-xs font-medium text-gray-700 mb-2">색상 선택</label>
+                <div className="grid grid-cols-6 gap-3">
                   {COLOR_PALETTE.map(color => (
                     <button
                       key={color.name}
