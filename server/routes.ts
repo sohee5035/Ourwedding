@@ -87,8 +87,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/venues/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const venue = await storage.getVenue(req.params.id);
-      if (!venue) {
+      if (!venue || venue.coupleId !== coupleId) {
         return res.status(404).json({ error: "Venue not found" });
       }
       res.json(venue);
@@ -113,6 +115,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existingVenue = await storage.getVenue(req.params.id);
+      if (!existingVenue || existingVenue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue not found" });
+      }
       const parsed = insertVenueSchema.partial().parse(req.body);
       const venue = await storage.updateVenue(req.params.id, parsed);
       res.json(venue);
@@ -125,6 +131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existingVenue = await storage.getVenue(req.params.id);
+      if (!existingVenue || existingVenue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue not found" });
+      }
       await storage.deleteVenue(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -135,6 +145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Image Upload (Cloudinary)
   app.post("/api/upload", upload.single("image"), async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      
       if (!req.file) {
         return res.status(400).json({ error: "No image file provided" });
       }
@@ -172,8 +185,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/upload/:publicId", async (req, res) => {
     try {
-      const cloudinary = getCloudinary();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      
       const publicId = decodeURIComponent(req.params.publicId);
+      
+      const venues = await storage.getVenues(coupleId);
+      const imageOwned = venues.some(venue => 
+        venue.photos?.some(photo => photo.publicId === publicId)
+      );
+      
+      if (!imageOwned) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      const cloudinary = getCloudinary();
       await cloudinary.uploader.destroy(publicId);
       res.status(204).send();
     } catch (error) {
@@ -196,6 +222,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/venues/:venueId/quotes", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const venue = await storage.getVenue(req.params.venueId);
+      if (!venue || venue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue not found" });
+      }
       const quotes = await storage.getVenueQuotes(req.params.venueId);
       res.json(quotes);
     } catch (error) {
@@ -205,8 +237,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/venue-quotes/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const quote = await storage.getVenueQuote(req.params.id);
       if (!quote) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
+      const venue = await storage.getVenue(quote.venueId);
+      if (!venue || venue.coupleId !== coupleId) {
         return res.status(404).json({ error: "Venue quote not found" });
       }
       res.json(quote);
@@ -217,7 +255,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/venue-quotes", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertVenueQuoteSchema.parse(req.body);
+      const venue = await storage.getVenue(parsed.venueId);
+      if (!venue || venue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue not found" });
+      }
       const quote = await storage.createVenueQuote(parsed);
       res.status(201).json(quote);
     } catch (error) {
@@ -227,6 +271,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/venue-quotes/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existingQuote = await storage.getVenueQuote(req.params.id);
+      if (!existingQuote) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
+      const venue = await storage.getVenue(existingQuote.venueId);
+      if (!venue || venue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
       const parsed = insertVenueQuoteSchema.partial().parse(req.body);
       const quote = await storage.updateVenueQuote(req.params.id, parsed);
       res.json(quote);
@@ -237,6 +291,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/venue-quotes/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existingQuote = await storage.getVenueQuote(req.params.id);
+      if (!existingQuote) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
+      const venue = await storage.getVenue(existingQuote.venueId);
+      if (!venue || venue.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Venue quote not found" });
+      }
       await storage.deleteVenueQuote(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -272,6 +336,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getChecklistItem(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
       const parsed = insertChecklistItemSchema.partial().parse(req.body);
       const item = await storage.updateChecklistItem(req.params.id, parsed);
       res.json(item);
@@ -284,6 +352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getChecklistItem(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
       await storage.deleteChecklistItem(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -319,6 +391,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getBudgetItem(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Budget item not found" });
+      }
       const parsed = insertBudgetItemSchema.partial().parse(req.body);
       const item = await storage.updateBudgetItem(req.params.id, parsed);
       res.json(item);
@@ -331,6 +407,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getBudgetItem(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Budget item not found" });
+      }
       await storage.deleteBudgetItem(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -366,6 +446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getGuest(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Guest not found" });
+      }
       const parsed = insertGuestSchema.partial().parse(req.body);
       const guest = await storage.updateGuest(req.params.id, parsed);
       res.json(guest);
@@ -378,6 +462,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
+      const existing = await storage.getGuest(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Guest not found" });
+      }
       await storage.deleteGuest(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -388,7 +476,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shared Notes
   app.get("/api/notes", async (req, res) => {
     try {
-      const notes = await storage.getSharedNotes();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const notes = await storage.getSharedNotesByCoupleId(coupleId);
       res.json(notes);
     } catch (error) {
       res.status(500).json({ error: "Failed to get notes" });
@@ -397,8 +487,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/notes", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertSharedNoteSchema.parse(req.body);
-      const note = await storage.createSharedNote(parsed);
+      const note = await storage.createSharedNote({ ...parsed, coupleId });
       res.status(201).json(note);
     } catch (error) {
       res.status(400).json({ error: "Invalid note data" });
@@ -407,6 +499,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/notes/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existing = await storage.getSharedNote(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Note not found" });
+      }
       const { content } = req.body;
       if (!content || typeof content !== 'string') {
         return res.status(400).json({ error: "Content is required" });
@@ -420,6 +518,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/notes/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existing = await storage.getSharedNote(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "Note not found" });
+      }
       await storage.deleteSharedNote(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -720,6 +824,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/calendar-events/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existing = await storage.getCalendarEvent(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "일정을 찾을 수 없습니다" });
+      }
       const parsed = insertCalendarEventSchema.partial().parse(req.body);
       const event = await storage.updateCalendarEvent(req.params.id, parsed);
       res.json(event);
@@ -730,6 +840,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/calendar-events/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existing = await storage.getCalendarEvent(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "일정을 찾을 수 없습니다" });
+      }
       await storage.deleteCalendarEvent(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -740,10 +856,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Event Categories
   app.get("/api/event-categories", async (req, res) => {
     try {
-      if (!req.session.coupleId) {
-        return res.status(401).json({ error: "로그인이 필요합니다" });
-      }
-      const categories = await storage.getEventCategoriesByCoupleId(req.session.coupleId);
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const categories = await storage.getEventCategoriesByCoupleId(coupleId);
       res.json(categories);
     } catch (error) {
       res.status(500).json({ error: "카테고리를 가져오는데 실패했습니다" });
@@ -752,12 +867,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/event-categories", async (req, res) => {
     try {
-      if (!req.session.coupleId) {
-        return res.status(401).json({ error: "로그인이 필요합니다" });
-      }
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertEventCategorySchema.parse({
         ...req.body,
-        coupleId: req.session.coupleId,
+        coupleId,
       });
       const category = await storage.createEventCategory(parsed);
       res.status(201).json(category);
@@ -768,6 +882,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/event-categories/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const existing = await storage.getEventCategory(req.params.id);
+      if (!existing || existing.coupleId !== coupleId) {
+        return res.status(404).json({ error: "카테고리를 찾을 수 없습니다" });
+      }
       await storage.deleteEventCategory(req.params.id);
       res.status(204).send();
     } catch (error) {

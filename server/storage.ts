@@ -195,6 +195,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(checklistItems).where(eq(checklistItems.coupleId, coupleId)).orderBy(checklistItems.createdAt);
   }
 
+  async getChecklistItem(id: string): Promise<ChecklistItem | undefined> {
+    const [item] = await db.select().from(checklistItems).where(eq(checklistItems.id, id));
+    return item || undefined;
+  }
+
   async createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem> {
     const [created] = await db.insert(checklistItems).values(item).returning();
     return created;
@@ -218,6 +223,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(budgetItems).where(eq(budgetItems.coupleId, coupleId)).orderBy(budgetItems.createdAt);
   }
 
+  async getBudgetItem(id: string): Promise<BudgetItem | undefined> {
+    const [item] = await db.select().from(budgetItems).where(eq(budgetItems.id, id));
+    return item || undefined;
+  }
+
   async createBudgetItem(item: InsertBudgetItem): Promise<BudgetItem> {
     const [created] = await db.insert(budgetItems).values(item).returning();
     return created;
@@ -239,6 +249,11 @@ export class DatabaseStorage implements IStorage {
   // Guests - filtered by coupleId
   async getGuests(coupleId: string): Promise<Guest[]> {
     return await db.select().from(guests).where(eq(guests.coupleId, coupleId)).orderBy(guests.createdAt);
+  }
+
+  async getGuest(id: string): Promise<Guest | undefined> {
+    const [guest] = await db.select().from(guests).where(eq(guests.id, id));
+    return guest || undefined;
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {
@@ -266,6 +281,11 @@ export class DatabaseStorage implements IStorage {
 
   async getSharedNotesByCoupleId(coupleId: string): Promise<SharedNote[]> {
     return await db.select().from(sharedNotes).where(eq(sharedNotes.coupleId, coupleId)).orderBy(sharedNotes.createdAt);
+  }
+
+  async getSharedNote(id: string): Promise<SharedNote | undefined> {
+    const [note] = await db.select().from(sharedNotes).where(eq(sharedNotes.id, id));
+    return note || undefined;
   }
 
   async createSharedNote(note: InsertSharedNote): Promise<SharedNote> {
@@ -389,6 +409,11 @@ export class DatabaseStorage implements IStorage {
   // Event Categories
   async getEventCategoriesByCoupleId(coupleId: string): Promise<EventCategory[]> {
     return await db.select().from(eventCategories).where(eq(eventCategories.coupleId, coupleId)).orderBy(eventCategories.createdAt);
+  }
+
+  async getEventCategory(id: string): Promise<EventCategory | undefined> {
+    const [category] = await db.select().from(eventCategories).where(eq(eventCategories.id, id));
+    return category || undefined;
   }
 
   async createEventCategory(category: InsertEventCategory): Promise<EventCategory> {
