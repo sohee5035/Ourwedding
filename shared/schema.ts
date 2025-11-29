@@ -25,6 +25,7 @@ export const members = pgTable("members", {
 
 export const weddingInfo = pgTable("wedding_info", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   weddingDate: text("wedding_date"),
   groomName: text("groom_name"),
   brideName: text("bride_name"),
@@ -35,6 +36,7 @@ export const weddingInfo = pgTable("wedding_info", {
 
 export const venues = pgTable("venues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   address: text("address").notNull(),
   lat: real("lat").notNull().default(37.5665),
@@ -62,6 +64,7 @@ export const venueQuotes = pgTable("venue_quotes", {
 
 export const checklistItems = pgTable("checklist_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
   description: text("description"),
   completed: boolean("completed").default(false),
@@ -73,6 +76,7 @@ export const checklistItems = pgTable("checklist_items", {
 
 export const budgetItems = pgTable("budget_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   category: text("category").notNull(),
   budgetAmount: integer("budget_amount").default(0),
   actualAmount: integer("actual_amount").default(0),
@@ -83,6 +87,7 @@ export const budgetItems = pgTable("budget_items", {
 
 export const guests = pgTable("guests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   phone: text("phone").default(''),
   side: text("side").notNull(),
