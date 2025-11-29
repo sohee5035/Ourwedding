@@ -16,39 +16,39 @@ import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
-  // Wedding Info
-  getWeddingInfo(): Promise<WeddingInfo | undefined>;
-  updateWeddingInfo(info: Partial<InsertWeddingInfo>): Promise<WeddingInfo>;
+  // Wedding Info - filtered by coupleId
+  getWeddingInfo(coupleId: string): Promise<WeddingInfo | undefined>;
+  updateWeddingInfo(coupleId: string, info: Partial<InsertWeddingInfo>): Promise<WeddingInfo>;
 
-  // Venues
-  getVenues(): Promise<Venue[]>;
+  // Venues - filtered by coupleId
+  getVenues(coupleId: string): Promise<Venue[]>;
   getVenue(id: string): Promise<Venue | undefined>;
   createVenue(venue: InsertVenue): Promise<Venue>;
   updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue>;
   deleteVenue(id: string): Promise<void>;
 
-  // Venue Quotes
+  // Venue Quotes - through venue's coupleId
   getVenueQuotes(venueId: string): Promise<VenueQuote[]>;
-  getAllVenueQuotes(): Promise<VenueQuote[]>;
+  getAllVenueQuotes(coupleId: string): Promise<VenueQuote[]>;
   getVenueQuote(id: string): Promise<VenueQuote | undefined>;
   createVenueQuote(quote: InsertVenueQuote): Promise<VenueQuote>;
   updateVenueQuote(id: string, quote: Partial<InsertVenueQuote>): Promise<VenueQuote>;
   deleteVenueQuote(id: string): Promise<void>;
 
-  // Checklist
-  getChecklistItems(): Promise<ChecklistItem[]>;
+  // Checklist - filtered by coupleId
+  getChecklistItems(coupleId: string): Promise<ChecklistItem[]>;
   createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem>;
   updateChecklistItem(id: string, item: Partial<InsertChecklistItem>): Promise<ChecklistItem>;
   deleteChecklistItem(id: string): Promise<void>;
 
-  // Budget
-  getBudgetItems(): Promise<BudgetItem[]>;
+  // Budget - filtered by coupleId
+  getBudgetItems(coupleId: string): Promise<BudgetItem[]>;
   createBudgetItem(item: InsertBudgetItem): Promise<BudgetItem>;
   updateBudgetItem(id: string, item: Partial<InsertBudgetItem>): Promise<BudgetItem>;
   deleteBudgetItem(id: string): Promise<void>;
 
-  // Guests
-  getGuests(): Promise<Guest[]>;
+  // Guests - filtered by coupleId
+  getGuests(coupleId: string): Promise<Guest[]>;
   createGuest(guest: InsertGuest): Promise<Guest>;
   updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest>;
   deleteGuest(id: string): Promise<void>;
@@ -93,14 +93,14 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Wedding Info
-  async getWeddingInfo(): Promise<WeddingInfo | undefined> {
-    const [info] = await db.select().from(weddingInfo).limit(1);
+  // Wedding Info - filtered by coupleId
+  async getWeddingInfo(coupleId: string): Promise<WeddingInfo | undefined> {
+    const [info] = await db.select().from(weddingInfo).where(eq(weddingInfo.coupleId, coupleId)).limit(1);
     return info || undefined;
   }
 
-  async updateWeddingInfo(info: Partial<InsertWeddingInfo>): Promise<WeddingInfo> {
-    const existing = await this.getWeddingInfo();
+  async updateWeddingInfo(coupleId: string, info: Partial<InsertWeddingInfo>): Promise<WeddingInfo> {
+    const existing = await this.getWeddingInfo(coupleId);
     
     if (existing) {
       const [updated] = await db
@@ -112,15 +112,15 @@ export class DatabaseStorage implements IStorage {
     } else {
       const [created] = await db
         .insert(weddingInfo)
-        .values(info)
+        .values({ ...info, coupleId })
         .returning();
       return created;
     }
   }
 
-  // Venues
-  async getVenues(): Promise<Venue[]> {
-    return await db.select().from(venues).orderBy(venues.createdAt);
+  // Venues - filtered by coupleId
+  async getVenues(coupleId: string): Promise<Venue[]> {
+    return await db.select().from(venues).where(eq(venues.coupleId, coupleId)).orderBy(venues.createdAt);
   }
 
   async getVenue(id: string): Promise<Venue | undefined> {
@@ -129,14 +129,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createVenue(venue: InsertVenue): Promise<Venue> {
-    const [created] = await db.insert(venues).values(venue).returning();
+    const venueData = {
+      ...venue,
+      photos: venue.photos ? (venue.photos as Array<{ url: string; publicId: string }>) : []
+    };
+    const [created] = await db.insert(venues).values(venueData).returning();
     return created;
   }
 
   async updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue> {
+    const updateData: any = { ...venue, updatedAt: new Date() };
+    if (venue.photos) {
+      updateData.photos = venue.photos as Array<{ url: string; publicId: string }>;
+    }
     const [updated] = await db
       .update(venues)
-      .set({ ...venue, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(venues.id, id))
       .returning();
     return updated;
@@ -151,8 +159,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(venueQuotes).where(eq(venueQuotes.venueId, venueId)).orderBy(venueQuotes.createdAt);
   }
 
-  async getAllVenueQuotes(): Promise<VenueQuote[]> {
-    return await db.select().from(venueQuotes).orderBy(venueQuotes.createdAt);
+  async getAllVenueQuotes(coupleId: string): Promise<VenueQuote[]> {
+    const coupleVenues = await this.getVenues(coupleId);
+    const venueIds = coupleVenues.map(v => v.id);
+    if (venueIds.length === 0) return [];
+    const allQuotes = await db.select().from(venueQuotes).orderBy(venueQuotes.createdAt);
+    return allQuotes.filter(q => venueIds.includes(q.venueId));
   }
 
   async getVenueQuote(id: string): Promise<VenueQuote | undefined> {
@@ -178,9 +190,9 @@ export class DatabaseStorage implements IStorage {
     await db.delete(venueQuotes).where(eq(venueQuotes.id, id));
   }
 
-  // Checklist
-  async getChecklistItems(): Promise<ChecklistItem[]> {
-    return await db.select().from(checklistItems).orderBy(checklistItems.createdAt);
+  // Checklist - filtered by coupleId
+  async getChecklistItems(coupleId: string): Promise<ChecklistItem[]> {
+    return await db.select().from(checklistItems).where(eq(checklistItems.coupleId, coupleId)).orderBy(checklistItems.createdAt);
   }
 
   async createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem> {
@@ -201,9 +213,9 @@ export class DatabaseStorage implements IStorage {
     await db.delete(checklistItems).where(eq(checklistItems.id, id));
   }
 
-  // Budget
-  async getBudgetItems(): Promise<BudgetItem[]> {
-    return await db.select().from(budgetItems).orderBy(budgetItems.createdAt);
+  // Budget - filtered by coupleId
+  async getBudgetItems(coupleId: string): Promise<BudgetItem[]> {
+    return await db.select().from(budgetItems).where(eq(budgetItems.coupleId, coupleId)).orderBy(budgetItems.createdAt);
   }
 
   async createBudgetItem(item: InsertBudgetItem): Promise<BudgetItem> {
@@ -224,9 +236,9 @@ export class DatabaseStorage implements IStorage {
     await db.delete(budgetItems).where(eq(budgetItems.id, id));
   }
 
-  // Guests
-  async getGuests(): Promise<Guest[]> {
-    return await db.select().from(guests).orderBy(guests.createdAt);
+  // Guests - filtered by coupleId
+  async getGuests(coupleId: string): Promise<Guest[]> {
+    return await db.select().from(guests).where(eq(guests.coupleId, coupleId)).orderBy(guests.createdAt);
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {

@@ -39,11 +39,22 @@ function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function requireAuth(req: any, res: any): string | null {
+  const coupleId = req.session?.coupleId;
+  if (!coupleId) {
+    res.status(401).json({ error: "로그인이 필요합니다" });
+    return null;
+  }
+  return coupleId;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Wedding Info
   app.get("/api/wedding-info", async (req, res) => {
     try {
-      const info = await storage.getWeddingInfo();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const info = await storage.getWeddingInfo(coupleId);
       res.json(info || {});
     } catch (error) {
       res.status(500).json({ error: "Failed to get wedding info" });
@@ -52,8 +63,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/wedding-info", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertWeddingInfoSchema.partial().parse(req.body);
-      const info = await storage.updateWeddingInfo(parsed);
+      const info = await storage.updateWeddingInfo(coupleId, parsed);
       res.json(info);
     } catch (error) {
       res.status(400).json({ error: "Invalid wedding info data" });
@@ -63,7 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Venues
   app.get("/api/venues", async (req, res) => {
     try {
-      const venues = await storage.getVenues();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const venues = await storage.getVenues(coupleId);
       res.json(venues);
     } catch (error) {
       res.status(500).json({ error: "Failed to get venues" });
@@ -84,8 +99,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/venues", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertVenueSchema.parse(req.body);
-      const venue = await storage.createVenue(parsed);
+      const venue = await storage.createVenue({ ...parsed, coupleId });
       res.status(201).json(venue);
     } catch (error) {
       res.status(400).json({ error: "Invalid venue data" });
@@ -94,6 +111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/venues/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertVenueSchema.partial().parse(req.body);
       const venue = await storage.updateVenue(req.params.id, parsed);
       res.json(venue);
@@ -104,6 +123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/venues/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       await storage.deleteVenue(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -164,7 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Venue Quotes
   app.get("/api/venue-quotes", async (req, res) => {
     try {
-      const quotes = await storage.getAllVenueQuotes();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const quotes = await storage.getAllVenueQuotes(coupleId);
       res.json(quotes);
     } catch (error) {
       res.status(500).json({ error: "Failed to get venue quotes" });
@@ -224,7 +247,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Checklist
   app.get("/api/checklist", async (req, res) => {
     try {
-      const items = await storage.getChecklistItems();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const items = await storage.getChecklistItems(coupleId);
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: "Failed to get checklist items" });
@@ -233,8 +258,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/checklist", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertChecklistItemSchema.parse(req.body);
-      const item = await storage.createChecklistItem(parsed);
+      const item = await storage.createChecklistItem({ ...parsed, coupleId });
       res.status(201).json(item);
     } catch (error) {
       res.status(400).json({ error: "Invalid checklist item data" });
@@ -243,6 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/checklist/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertChecklistItemSchema.partial().parse(req.body);
       const item = await storage.updateChecklistItem(req.params.id, parsed);
       res.json(item);
@@ -253,6 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/checklist/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       await storage.deleteChecklistItem(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -263,7 +294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Budget
   app.get("/api/budget", async (req, res) => {
     try {
-      const items = await storage.getBudgetItems();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const items = await storage.getBudgetItems(coupleId);
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: "Failed to get budget items" });
@@ -272,8 +305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/budget", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertBudgetItemSchema.parse(req.body);
-      const item = await storage.createBudgetItem(parsed);
+      const item = await storage.createBudgetItem({ ...parsed, coupleId });
       res.status(201).json(item);
     } catch (error) {
       res.status(400).json({ error: "Invalid budget item data" });
@@ -282,6 +317,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/budget/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertBudgetItemSchema.partial().parse(req.body);
       const item = await storage.updateBudgetItem(req.params.id, parsed);
       res.json(item);
@@ -292,6 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/budget/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       await storage.deleteBudgetItem(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -302,7 +341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guests
   app.get("/api/guests", async (req, res) => {
     try {
-      const guests = await storage.getGuests();
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const guests = await storage.getGuests(coupleId);
       res.json(guests);
     } catch (error) {
       res.status(500).json({ error: "Failed to get guests" });
@@ -311,8 +352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/guests", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertGuestSchema.parse(req.body);
-      const guest = await storage.createGuest(parsed);
+      const guest = await storage.createGuest({ ...parsed, coupleId });
       res.status(201).json(guest);
     } catch (error) {
       res.status(400).json({ error: "Invalid guest data" });
@@ -321,6 +364,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/guests/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       const parsed = insertGuestSchema.partial().parse(req.body);
       const guest = await storage.updateGuest(req.params.id, parsed);
       res.json(guest);
@@ -331,6 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/guests/:id", async (req, res) => {
     try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
       await storage.deleteGuest(req.params.id);
       res.status(204).send();
     } catch (error) {
