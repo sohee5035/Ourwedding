@@ -458,24 +458,24 @@ const Venues = () => {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-2 text-center bg-white/80 rounded-lg p-3">
+                        <div className="grid grid-cols-4 gap-1.5 text-center bg-white/80 rounded-lg p-2.5">
                           <div>
-                            <p className="text-xs text-gray-500">견적</p>
-                            <p className="font-bold text-blush-600">
+                            <p className="text-[10px] text-gray-500">견적</p>
+                            <p className="font-bold text-sm text-blush-600">
                               {((quote.estimate || 0) / 10000).toLocaleString()}만원
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">최소인원</p>
-                            <p className="font-semibold text-sm">{quote.minGuests || 0}명</p>
+                            <p className="text-[10px] text-gray-500">최소인원</p>
+                            <p className="font-semibold text-xs">{quote.minGuests || 0}명</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">식대</p>
-                            <p className="font-semibold text-sm">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
+                            <p className="text-[10px] text-gray-500">식대</p>
+                            <p className="font-semibold text-xs">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">대관료</p>
-                            <p className="font-semibold text-sm">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
+                            <p className="text-[10px] text-gray-500">대관료</p>
+                            <p className="font-semibold text-xs">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
                           </div>
                         </div>
                         
@@ -547,24 +547,24 @@ const Venues = () => {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-2 text-center bg-white/80 rounded-lg p-3">
+                        <div className="grid grid-cols-4 gap-1.5 text-center bg-white/80 rounded-lg p-2.5">
                           <div>
-                            <p className="text-xs text-gray-500">견적</p>
-                            <p className="font-bold text-gray-600">
+                            <p className="text-[10px] text-gray-500">견적</p>
+                            <p className="font-bold text-sm text-gray-600">
                               {((quote.estimate || 0) / 10000).toLocaleString()}만원
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">최소인원</p>
-                            <p className="font-semibold text-sm">{quote.minGuests || 0}명</p>
+                            <p className="text-[10px] text-gray-500">최소인원</p>
+                            <p className="font-semibold text-xs">{quote.minGuests || 0}명</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">식대</p>
-                            <p className="font-semibold text-sm">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
+                            <p className="text-[10px] text-gray-500">식대</p>
+                            <p className="font-semibold text-xs">{((quote.mealCost || 0) / 10000).toFixed(0)}만원</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">대관료</p>
-                            <p className="font-semibold text-sm">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
+                            <p className="text-[10px] text-gray-500">대관료</p>
+                            <p className="font-semibold text-xs">{((quote.rentalFee || 0) / 10000).toFixed(0)}만원</p>
                           </div>
                         </div>
                       </div>
