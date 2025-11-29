@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ivory: #FFFEF7;
+  --color-ivory-50: #FFFEF7;
+  --color-ivory-100: #FEFCF0;
+  --color-ivory-200: #FDF9E6;
+  --color-ivory-300: #FCF6DC;
+  --color-ivory-400: #FAF0C8;
+  --color-ivory-500: #F8EAB4;
 
   --color-blush-50: #FFF5F7;
   --color-blush-100: #FFE4E8;
@@ -31,7 +36,7 @@
 
 @layer base {
   body {
-    @apply bg-ivory text-gray-800 font-sans antialiased selection:bg-blush-200 selection:text-blush-700;
+    @apply bg-ivory-50 text-gray-800 font-sans antialiased selection:bg-blush-200 selection:text-blush-700;
   }
 }
 
