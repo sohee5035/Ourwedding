@@ -402,7 +402,7 @@ const Guests = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">하객 관리</h1>
           <p className="text-sm text-gray-500 mt-1">
-            총 {getTotalEstimatedCount()}명 예상 (개별 {guests.length}명 + 그룹 {groupGuests.reduce((sum, g) => sum + g.estimatedCount, 0)}명)
+            총 {getTotalEstimatedCount()}명
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -490,11 +490,6 @@ const Guests = () => {
         <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-full">
           <span className="text-sm text-gray-600">미정</span>
           <span className="font-bold text-yellow-600">{guests.filter((g) => g.attendance === 'pending').length}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-full">
-          <FaUsers className="text-purple-500 text-sm" />
-          <span className="text-sm text-gray-600">총 예상</span>
-          <span className="font-bold text-purple-600">{getTotalEstimatedCount()}</span>
         </div>
       </div>
 
