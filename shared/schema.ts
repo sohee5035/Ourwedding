@@ -19,8 +19,17 @@ export const members = pgTable("members", {
   coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   pinHash: text("pin_hash").notNull(),
+  hashAlgorithm: text("hash_algorithm").notNull().default('sha256'),
   role: text("role").notNull().default('bride'),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const adminSettings = pgTable("admin_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  passwordHash: text("password_hash").notNull(),
+  hashAlgorithm: text("hash_algorithm").notNull().default('bcrypt'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const weddingInfo = pgTable("wedding_info", {
@@ -138,6 +147,12 @@ export const insertMemberSchema = createInsertSchema(members).omit({
   createdAt: true,
 });
 
+export const insertAdminSettingsSchema = createInsertSchema(adminSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertWeddingInfoSchema = createInsertSchema(weddingInfo).omit({
   id: true,
   createdAt: true,
@@ -193,6 +208,9 @@ export type Couple = typeof couples.$inferSelect;
 
 export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Member = typeof members.$inferSelect;
+
+export type InsertAdminSettings = z.infer<typeof insertAdminSettingsSchema>;
+export type AdminSettings = typeof adminSettings.$inferSelect;
 
 export type InsertWeddingInfo = z.infer<typeof insertWeddingInfoSchema>;
 export type WeddingInfo = typeof weddingInfo.$inferSelect;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { FaHeart, FaUserPlus, FaSignInAlt, FaUsers } from 'react-icons/fa';
 
-type AuthMode = 'welcome' | 'register' | 'join' | 'login';
+type AuthMode = 'welcome' | 'register' | 'join' | 'login' | 'forgot';
 
 interface InvitePreview {
   valid: boolean;
@@ -14,7 +14,7 @@ interface InvitePreview {
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('welcome');
   const [name, setName] = useState('');
-  const [pin, setPin] = useState('');
+  const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState<'bride' | 'groom'>('bride');
   const [error, setError] = useState('');
@@ -63,7 +63,7 @@ const Auth = () => {
     setError('');
     setIsSubmitting(true);
     
-    const result = await register(name, pin, role);
+    const result = await register(name, password, role);
     if (!result.success) {
       setError(result.error || '가입에 실패했습니다');
     }
@@ -75,7 +75,7 @@ const Auth = () => {
     setError('');
     setIsSubmitting(true);
     
-    const result = await join(name, pin, inviteCode);
+    const result = await join(name, password, inviteCode);
     if (!result.success) {
       setError(result.error || '합류에 실패했습니다');
     }
@@ -87,7 +87,7 @@ const Auth = () => {
     setError('');
     setIsSubmitting(true);
     
-    const result = await login(name, pin);
+    const result = await login(name, password);
     if (!result.success) {
       setError(result.error || '로그인에 실패했습니다');
     }
@@ -96,7 +96,7 @@ const Auth = () => {
 
   const resetForm = () => {
     setName('');
-    setPin('');
+    setPassword('');
     setInviteCode('');
     setRole('bride');
     setError('');
@@ -160,7 +160,7 @@ const Auth = () => {
           <div className="text-center mb-8">
             <FaHeart className="text-4xl text-blush-400 mx-auto mb-3" />
             <h2 className="text-xl font-bold text-gray-800 mb-1">새로 시작하기</h2>
-            <p className="text-sm text-gray-600">실명과 4자리 비밀번호를 설정해주세요</p>
+            <p className="text-sm text-gray-600">실명과 비밀번호를 설정해주세요</p>
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
@@ -210,18 +210,16 @@ const Auth = () => {
             </div>
 
             <div>
-              <label className="label">비밀번호 (4자리 숫자)</label>
+              <label className="label">비밀번호 (6자 이상)</label>
               <input
                 type="password"
-                inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
-                className="input-field text-center text-2xl tracking-[1em]"
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="••••"
+                className="input-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 입력"
+                minLength={6}
                 required
-                data-testid="input-register-pin"
+                data-testid="input-register-password"
               />
             </div>
 
@@ -232,7 +230,7 @@ const Auth = () => {
             <button
               type="submit"
               className="w-full btn-primary py-3"
-              disabled={isSubmitting || pin.length !== 4}
+              disabled={isSubmitting || password.length < 6}
               data-testid="button-submit-register"
             >
               {isSubmitting ? '가입 중...' : '시작하기'}
@@ -314,18 +312,16 @@ const Auth = () => {
             </div>
 
             <div>
-              <label className="label">비밀번호 (4자리 숫자)</label>
+              <label className="label">비밀번호 (6자 이상)</label>
               <input
                 type="password"
-                inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
-                className="input-field text-center text-2xl tracking-[1em]"
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="••••"
+                className="input-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 입력"
+                minLength={6}
                 required
-                data-testid="input-join-pin"
+                data-testid="input-join-password"
               />
             </div>
 
@@ -336,7 +332,7 @@ const Auth = () => {
             <button
               type="submit"
               className="w-full btn-primary py-3"
-              disabled={isSubmitting || pin.length !== 4 || !invitePreview?.valid}
+              disabled={isSubmitting || password.length < 6 || !invitePreview?.valid}
               data-testid="button-submit-join"
             >
               {isSubmitting ? '합류 중...' : '합류하기'}
@@ -351,6 +347,46 @@ const Auth = () => {
               뒤로 가기
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-ivory-50 to-blush-50">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <FaHeart className="text-4xl text-blush-400 mx-auto mb-3" />
+            <h2 className="text-xl font-bold text-gray-800 mb-1">비밀번호를 잊으셨나요?</h2>
+            <p className="text-sm text-gray-600">관리자에게 연락해주세요</p>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="text-center">
+              <p className="text-gray-700 mb-4">
+                비밀번호 재설정을 위해<br />
+                아래 카카오톡으로 연락해주세요
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-gray-600 mb-1">카카오톡 ID</p>
+                <p className="text-xl font-bold text-gray-800">wsh9193</p>
+              </div>
+              <p className="text-xs text-gray-500">
+                이름과 함께 문의해주시면<br />
+                빠르게 도와드리겠습니다
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMode('login')}
+            className="w-full text-gray-500 hover:text-gray-700 py-2 mt-4"
+            data-testid="button-back-forgot"
+          >
+            로그인으로 돌아가기
+          </button>
         </div>
       </div>
     );
@@ -381,18 +417,15 @@ const Auth = () => {
             </div>
 
             <div>
-              <label className="label">비밀번호 (4자리 숫자)</label>
+              <label className="label">비밀번호</label>
               <input
                 type="password"
-                inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
-                className="input-field text-center text-2xl tracking-[1em]"
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="••••"
+                className="input-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 입력"
                 required
-                data-testid="input-login-pin"
+                data-testid="input-login-password"
               />
             </div>
 
@@ -403,10 +436,19 @@ const Auth = () => {
             <button
               type="submit"
               className="w-full btn-primary py-3"
-              disabled={isSubmitting || pin.length !== 4}
+              disabled={isSubmitting || password.length < 1}
               data-testid="button-submit-login"
             >
               {isSubmitting ? '로그인 중...' : '로그인'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { resetForm(); setMode('forgot'); }}
+              className="w-full text-blush-600 hover:text-blush-700 py-2 text-sm"
+              data-testid="button-forgot-password"
+            >
+              비밀번호를 잊으셨나요?
             </button>
 
             <button

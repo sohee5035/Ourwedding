@@ -10,7 +10,8 @@ import {
   type Member, type InsertMember,
   type CalendarEvent, type InsertCalendarEvent,
   type EventCategory, type InsertEventCategory,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents, eventCategories
+  type AdminSettings, type InsertAdminSettings,
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents, eventCategories, adminSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -90,6 +91,15 @@ export interface IStorage {
   getEventCategoriesByCoupleId(coupleId: string): Promise<EventCategory[]>;
   createEventCategory(category: InsertEventCategory): Promise<EventCategory>;
   deleteEventCategory(id: string): Promise<void>;
+
+  // Admin Settings
+  getAdminSettings(): Promise<AdminSettings | undefined>;
+  createAdminSettings(settings: InsertAdminSettings): Promise<AdminSettings>;
+  updateAdminSettings(passwordHash: string): Promise<AdminSettings>;
+
+  // Member password update
+  getMemberByName(name: string): Promise<Member | undefined>;
+  updateMemberPassword(id: string, pinHash: string, hashAlgorithm: string): Promise<Member>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -423,6 +433,46 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEventCategory(id: string): Promise<void> {
     await db.delete(eventCategories).where(eq(eventCategories.id, id));
+  }
+
+  // Admin Settings
+  async getAdminSettings(): Promise<AdminSettings | undefined> {
+    const [settings] = await db.select().from(adminSettings).limit(1);
+    return settings || undefined;
+  }
+
+  async createAdminSettings(settings: InsertAdminSettings): Promise<AdminSettings> {
+    const [created] = await db.insert(adminSettings).values(settings).returning();
+    return created;
+  }
+
+  async updateAdminSettings(passwordHash: string): Promise<AdminSettings> {
+    const existing = await this.getAdminSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(adminSettings)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(adminSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      return this.createAdminSettings({ passwordHash, hashAlgorithm: 'bcrypt' });
+    }
+  }
+
+  // Member password update
+  async getMemberByName(name: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.name, name));
+    return member || undefined;
+  }
+
+  async updateMemberPassword(id: string, pinHash: string, hashAlgorithm: string): Promise<Member> {
+    const [updated] = await db
+      .update(members)
+      .set({ pinHash, hashAlgorithm })
+      .where(eq(members.id, id))
+      .returning();
+    return updated;
   }
 }
 

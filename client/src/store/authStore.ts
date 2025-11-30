@@ -26,9 +26,9 @@ interface AuthState {
   isAuthenticated: boolean;
   
   checkAuth: () => Promise<void>;
-  register: (name: string, pin: string, role: 'bride' | 'groom') => Promise<{ success: boolean; error?: string }>;
-  join: (name: string, pin: string, inviteCode: string) => Promise<{ success: boolean; error?: string }>;
-  login: (name: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, password: string, role: 'bride' | 'groom') => Promise<{ success: boolean; error?: string }>;
+  join: (name: string, password: string, inviteCode: string) => Promise<{ success: boolean; error?: string }>;
+  login: (name: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -60,13 +60,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (name: string, pin: string, role: 'bride' | 'groom') => {
+  register: async (name: string, password: string, role: 'bride' | 'groom') => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, pin, role }),
+        body: JSON.stringify({ name, password, role }),
       });
       
       if (response.ok) {
@@ -87,13 +87,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  join: async (name: string, pin: string, inviteCode: string) => {
+  join: async (name: string, password: string, inviteCode: string) => {
     try {
       const response = await fetch('/api/auth/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, pin, inviteCode }),
+        body: JSON.stringify({ name, password, inviteCode }),
       });
       
       if (response.ok) {
@@ -114,13 +114,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (name: string, pin: string) => {
+  login: async (name: string, password: string) => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, pin }),
+        body: JSON.stringify({ name, password }),
       });
       
       if (response.ok) {

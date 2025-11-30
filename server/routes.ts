@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createHash } from "crypto";
+import bcrypt from "bcrypt";
 import { z } from "zod";
 import multer from "multer";
 import { 
@@ -17,6 +18,7 @@ import {
 } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
+const BCRYPT_ROUNDS = 12;
 
 function getCloudinary() {
   const { v2: cloudinary } = require("cloudinary");
@@ -31,8 +33,20 @@ function getCloudinary() {
   return cloudinary;
 }
 
-function hashPin(pin: string): string {
+function hashPinSha256(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
+}
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+async function verifyPassword(password: string, hash: string, algorithm: string): Promise<boolean> {
+  if (algorithm === 'bcrypt') {
+    return bcrypt.compare(password, hash);
+  } else {
+    return hashPinSha256(password) === hash;
+  }
 }
 
 function generateInviteCode(): string {
@@ -534,22 +548,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth - Register (first member creates couple)
   const registerSchema = z.object({
     name: z.string().min(1),
-    pin: z.string().length(4).regex(/^\d{4}$/),
+    password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
     role: z.enum(['bride', 'groom']),
   });
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { name, pin, role } = registerSchema.parse(req.body);
+      const { name, password, role } = registerSchema.parse(req.body);
       
       const inviteCode = generateInviteCode();
       const couple = await storage.createCouple({ inviteCode });
       
-      const pinHash = hashPin(pin);
+      const pinHash = await hashPassword(password);
       const member = await storage.createMember({
         coupleId: couple.id,
         name,
         pinHash,
+        hashAlgorithm: 'bcrypt',
         role,
       });
       
@@ -594,13 +609,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth - Join (second member joins with invite code)
   const joinSchema = z.object({
     name: z.string().min(1),
-    pin: z.string().length(4).regex(/^\d{4}$/),
+    password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
     inviteCode: z.string().length(6),
   });
 
   app.post("/api/auth/join", async (req, res) => {
     try {
-      const { name, pin, inviteCode } = joinSchema.parse(req.body);
+      const { name, password, inviteCode } = joinSchema.parse(req.body);
       
       const couple = await storage.getCoupleByInviteCode(inviteCode.toUpperCase());
       if (!couple) {
@@ -620,11 +635,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const firstMemberRole = existingMembers[0]?.role || 'bride';
       const role = firstMemberRole === 'bride' ? 'groom' : 'bride';
       
-      const pinHash = hashPin(pin);
+      const pinHash = await hashPassword(password);
       const member = await storage.createMember({
         coupleId: couple.id,
         name,
         pinHash,
+        hashAlgorithm: 'bcrypt',
         role,
       });
       
@@ -644,17 +660,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth - Login
   const loginSchema = z.object({
     name: z.string().min(1),
-    pin: z.string().length(4).regex(/^\d{4}$/),
+    password: z.string().min(1),
   });
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { name, pin } = loginSchema.parse(req.body);
+      const { name, password } = loginSchema.parse(req.body);
       
-      const pinHash = hashPin(pin);
-      const member = await storage.getMemberByNameAndPinHash(name, pinHash);
+      const member = await storage.getMemberByName(name);
       if (!member) {
         return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
+      }
+      
+      const isValid = await verifyPassword(password, member.pinHash, member.hashAlgorithm || 'sha256');
+      if (!isValid) {
+        return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
+      }
+      
+      if (member.hashAlgorithm !== 'bcrypt') {
+        const newHash = await hashPassword(password);
+        await storage.updateMemberPassword(member.id, newHash, 'bcrypt');
       }
       
       req.session.memberId = member.id;
@@ -714,19 +739,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     password: z.string().min(1),
   });
 
-  app.post("/api/admin/login", (req, res) => {
+  app.post("/api/admin/login", async (req, res) => {
     try {
       const { password } = adminLoginSchema.parse(req.body);
       
-      const adminPassword = process.env.ADMIN_PASSWORD || '1122';
+      const adminSettings = await storage.getAdminSettings();
       
-      if (password !== adminPassword) {
-        return res.status(401).json({ error: "비밀번호가 일치하지 않습니다" });
+      if (adminSettings) {
+        const isValid = await verifyPassword(password, adminSettings.passwordHash, adminSettings.hashAlgorithm);
+        if (!isValid) {
+          return res.status(401).json({ error: "비밀번호가 일치하지 않습니다" });
+        }
+      } else {
+        const envPassword = process.env.ADMIN_PASSWORD || 'wed1122';
+        if (password !== envPassword) {
+          return res.status(401).json({ error: "비밀번호가 일치하지 않습니다" });
+        }
+        const hashedPassword = await hashPassword(envPassword);
+        await storage.createAdminSettings({ passwordHash: hashedPassword, hashAlgorithm: 'bcrypt' });
       }
       
       req.session.isAdmin = true;
       res.json({ success: true });
     } catch (error) {
+      console.error(error);
       res.status(400).json({ error: "로그인에 실패했습니다" });
     }
   });
@@ -738,6 +774,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/me", (req, res) => {
     res.json({ isAdmin: !!req.session.isAdmin });
+  });
+
+  // Admin - Change password
+  const adminChangePasswordSchema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(6, "새 비밀번호는 최소 6자 이상이어야 합니다"),
+  });
+
+  app.post("/api/admin/change-password", async (req, res) => {
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ error: "관리자 권한이 필요합니다" });
+    }
+    
+    try {
+      const { currentPassword, newPassword } = adminChangePasswordSchema.parse(req.body);
+      
+      const adminSettings = await storage.getAdminSettings();
+      
+      if (adminSettings) {
+        const isValid = await verifyPassword(currentPassword, adminSettings.passwordHash, adminSettings.hashAlgorithm);
+        if (!isValid) {
+          return res.status(401).json({ error: "현재 비밀번호가 일치하지 않습니다" });
+        }
+      } else {
+        const envPassword = process.env.ADMIN_PASSWORD || 'wed1122';
+        if (currentPassword !== envPassword) {
+          return res.status(401).json({ error: "현재 비밀번호가 일치하지 않습니다" });
+        }
+      }
+      
+      const newHash = await hashPassword(newPassword);
+      await storage.updateAdminSettings(newHash);
+      
+      res.json({ success: true, message: "비밀번호가 변경되었습니다" });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: "비밀번호 변경에 실패했습니다" });
+    }
   });
 
   // Admin - Get all couples with members
