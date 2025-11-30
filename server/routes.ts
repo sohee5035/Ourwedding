@@ -12,6 +12,7 @@ import {
   insertChecklistItemSchema,
   insertBudgetItemSchema,
   insertGuestSchema,
+  insertGroupGuestSchema,
   insertSharedNoteSchema,
   insertCalendarEventSchema,
   insertEventCategorySchema
@@ -484,6 +485,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete guest" });
+    }
+  });
+
+  // Group Guests
+  app.get("/api/group-guests", async (req, res) => {
+    try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const groupGuests = await storage.getGroupGuests(coupleId);
+      res.json(groupGuests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get group guests" });
+    }
+  });
+
+  app.post("/api/group-guests", async (req, res) => {
+    try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const parsed = insertGroupGuestSchema.parse(req.body);
+      const groupGuest = await storage.createGroupGuest({ ...parsed, coupleId });
+      res.status(201).json(groupGuest);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid group guest data" });
+    }
+  });
+
+  app.patch("/api/group-guests/:id", async (req, res) => {
+    try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const groupGuests = await storage.getGroupGuests(coupleId);
+      const existing = groupGuests.find(g => g.id === req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Group guest not found" });
+      }
+      const parsed = insertGroupGuestSchema.partial().parse(req.body);
+      const groupGuest = await storage.updateGroupGuest(req.params.id, parsed);
+      res.json(groupGuest);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid group guest data" });
+    }
+  });
+
+  app.delete("/api/group-guests/:id", async (req, res) => {
+    try {
+      const coupleId = requireAuth(req, res);
+      if (!coupleId) return;
+      const groupGuests = await storage.getGroupGuests(coupleId);
+      const existing = groupGuests.find(g => g.id === req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Group guest not found" });
+      }
+      await storage.deleteGroupGuest(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete group guest" });
     }
   });
 
