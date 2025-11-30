@@ -102,9 +102,10 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0"]
+expertMode = true
 
 [userenv]
 
 [userenv.shared]
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "1122"
+ADMIN_PASSWORD = "wed1122"
