@@ -27,6 +27,9 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
+// Trust proxy for Replit deployment
+app.set('trust proxy', 1);
+
 const PgSession = connectPgSimple(session);
 
 const sessionPool = new Pool({
@@ -45,6 +48,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
   }
 }));
