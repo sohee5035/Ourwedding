@@ -75,11 +75,12 @@ Preferred communication style: Simple, everyday language.
 - Database schema migrations managed by Drizzle Kit
 
 **Schema Design**
-- Five main tables: wedding_info, venues, checklist_items, budget_items, guests
+- Six main tables: wedding_info, venues, checklist_items, budget_items, guests, group_guests
 - UUID primary keys using PostgreSQL's gen_random_uuid()
 - Timestamps for created_at/updated_at tracking
 - Array fields for flexible data (photos array in venues)
 - Text fields for flexible string data, integer fields for numeric values
+- Group guests table for unnamed/headcount-only guest entries (parents' guests, relatives)
 
 **ORM & Type Safety**
 - Drizzle ORM for type-safe database queries
@@ -90,14 +91,14 @@ Preferred communication style: Simple, everyday language.
 ### Authentication and Authorization
 
 **Current Implementation**
-- No authentication system currently implemented
-- Application operates as single-user system
-- All data is publicly accessible once deployed
+- Session-based authentication using express-session with PostgreSQL storage
+- bcrypt password hashing (12 rounds) for secure credential storage
+- Dual-hash verification supports migration from legacy SHA-256 to bcrypt
+- Auto-migration: old SHA-256 passwords are automatically upgraded to bcrypt on successful login
+- Minimum 6-character password policy
 
-**Consideration**
-- Future implementation would likely use session-based authentication
-- connect-pg-simple package already included for PostgreSQL session storage
-- Would require login flow and user association with wedding data
+**Password Recovery**
+- "Forgot password" feature displays admin KakaoTalk contact (wsh9193) for password reset requests
 
 ### Project Structure
 
