@@ -1,4 +1,5 @@
 // API client for wedding planning app
+import type { GroupGuest } from '../types';
 
 export async function fetchWeddingInfo() {
   const res = await fetch('/api/wedding-info');
@@ -202,4 +203,38 @@ export async function deleteGuest(id: string) {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete guest');
+}
+
+// Group Guests
+export async function fetchGroupGuests(): Promise<GroupGuest[]> {
+  const res = await fetch('/api/group-guests');
+  if (!res.ok) throw new Error('Failed to fetch group guests');
+  return res.json();
+}
+
+export async function createGroupGuest(data: Omit<GroupGuest, 'id' | 'createdAt'>): Promise<GroupGuest> {
+  const res = await fetch('/api/group-guests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create group guest');
+  return res.json();
+}
+
+export async function updateGroupGuest(id: string, data: Partial<Omit<GroupGuest, 'id' | 'createdAt'>>): Promise<GroupGuest> {
+  const res = await fetch(`/api/group-guests/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update group guest');
+  return res.json();
+}
+
+export async function deleteGroupGuest(id: string): Promise<void> {
+  const res = await fetch(`/api/group-guests/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete group guest');
 }

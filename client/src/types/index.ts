@@ -75,6 +75,16 @@ export interface Guest {
   createdAt: string;
 }
 
+// 그룹 하객 (부모님 지인, 친척 등 이름 없이 인원수만 관리)
+export interface GroupGuest {
+  id: string;
+  name: string; // 그룹명 (예: 아버지 지인, 어머니 친척 등)
+  side: 'groom' | 'bride'; // 신랑측 / 신부측
+  estimatedCount: number; // 예상 인원수
+  memo?: string;
+  createdAt: string;
+}
+
 // 결혼식 정보
 export interface WeddingInfo {
   weddingDate?: string;

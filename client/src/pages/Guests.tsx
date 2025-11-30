@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGuestStore } from '../store/guestStore';
 import { useAuthStore } from '../store/authStore';
-import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck } from 'react-icons/fa';
-import type { Guest } from '../types';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck, FaUsers } from 'react-icons/fa';
+import type { Guest, GroupGuest } from '../types';
 
 interface BulkGuestRow {
   name: string;
@@ -11,18 +11,30 @@ interface BulkGuestRow {
 }
 
 const Guests = () => {
-  const { guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount, fetchGuests } =
-    useGuestStore();
+  const { 
+    guests, addGuest, updateGuest, deleteGuest, getGuestsBySide, getAttendingCount, fetchGuests,
+    groupGuests, addGroupGuest, updateGroupGuest, deleteGroupGuest, getGroupGuestsBySide, fetchGroupGuests, getTotalEstimatedCount
+  } = useGuestStore();
   const { member } = useAuthStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
+  const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteGroupConfirmId, setDeleteGroupConfirmId] = useState<string | null>(null);
   const [attendanceDropdownId, setAttendanceDropdownId] = useState<string | null>(null);
   const [csvUploadResult, setCsvUploadResult] = useState<{ count: number; show: boolean } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [groupFormData, setGroupFormData] = useState<Omit<GroupGuest, 'id' | 'createdAt'>>({
+    name: '',
+    side: 'groom',
+    estimatedCount: 10,
+    memo: '',
+  });
 
   const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
   const [filterAttendance, setFilterAttendance] = useState<'all' | 'attending' | 'declined' | 'pending'>('all');
@@ -43,13 +55,15 @@ const Guests = () => {
 
   useEffect(() => {
     fetchGuests();
-  }, [fetchGuests]);
+    fetchGroupGuests();
+  }, [fetchGuests, fetchGroupGuests]);
 
   useEffect(() => {
     if (member?.role) {
       const side = member.role === 'bride' ? 'bride' : 'groom';
       setFormData(prev => ({ ...prev, side }));
       setBulkSide(side);
+      setGroupFormData(prev => ({ ...prev, side }));
     }
   }, [member?.role]);
 
@@ -298,8 +312,82 @@ const Guests = () => {
     setShowBulkForm(false);
   };
 
+  const [groupFormError, setGroupFormError] = useState<string | null>(null);
+
+  const handleAddGroupGuest = async () => {
+    setGroupFormError(null);
+    if (!groupFormData.name.trim()) {
+      setGroupFormError('그룹명을 입력해주세요.');
+      return;
+    }
+    if (!groupFormData.estimatedCount || groupFormData.estimatedCount < 1) {
+      setGroupFormError('예상 인원수는 1명 이상이어야 합니다.');
+      return;
+    }
+    try {
+      await addGroupGuest(groupFormData);
+      resetGroupForm();
+    } catch (error) {
+      setGroupFormError('그룹 하객 추가에 실패했습니다.');
+    }
+  };
+
+  const handleEditGroupGuest = (id: string) => {
+    const group = groupGuests.find((g) => g.id === id);
+    if (group) {
+      setGroupFormData({
+        name: group.name,
+        side: group.side,
+        estimatedCount: group.estimatedCount,
+        memo: group.memo || '',
+      });
+      setEditingGroupId(id);
+      setShowGroupForm(true);
+    }
+  };
+
+  const handleUpdateGroupGuest = async () => {
+    setGroupFormError(null);
+    if (!editingGroupId) return;
+    if (!groupFormData.name.trim()) {
+      setGroupFormError('그룹명을 입력해주세요.');
+      return;
+    }
+    if (!groupFormData.estimatedCount || groupFormData.estimatedCount < 1) {
+      setGroupFormError('예상 인원수는 1명 이상이어야 합니다.');
+      return;
+    }
+    try {
+      await updateGroupGuest(editingGroupId, groupFormData);
+      resetGroupForm();
+    } catch (error) {
+      setGroupFormError('그룹 하객 수정에 실패했습니다.');
+    }
+  };
+
+  const resetGroupForm = () => {
+    setGroupFormData({
+      name: '',
+      side: defaultSide,
+      estimatedCount: 10,
+      memo: '',
+    });
+    setEditingGroupId(null);
+    setShowGroupForm(false);
+    setGroupFormError(null);
+  };
+
+  const handleDeleteGroupConfirm = async (id: string) => {
+    await deleteGroupGuest(id);
+    setDeleteGroupConfirmId(null);
+  };
+
   const groomGuests = getGuestsBySide('groom');
   const brideGuests = getGuestsBySide('bride');
+  const groomGroupGuests = getGroupGuestsBySide('groom');
+  const brideGroupGuests = getGroupGuestsBySide('bride');
+  const groomGroupTotal = groomGroupGuests.reduce((sum, g) => sum + g.estimatedCount, 0);
+  const brideGroupTotal = brideGroupGuests.reduce((sum, g) => sum + g.estimatedCount, 0);
   const attendingCount = getAttendingCount();
 
   const filteredGuests = guests.filter((guest) => {
@@ -313,7 +401,9 @@ const Guests = () => {
       <div className="flex justify-between items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">하객 관리</h1>
-          <p className="text-sm text-gray-500 mt-1">총 {guests.length}명 (참석: {attendingCount}명)</p>
+          <p className="text-sm text-gray-500 mt-1">
+            총 {getTotalEstimatedCount()}명 예상 (개별 {guests.length}명 + 그룹 {groupGuests.reduce((sum, g) => sum + g.estimatedCount, 0)}명)
+          </p>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
@@ -344,6 +434,7 @@ const Guests = () => {
             onClick={() => {
               setShowBulkForm(true);
               setShowAddForm(false);
+              setShowGroupForm(false);
             }}
             className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
             data-testid="button-bulk-add"
@@ -353,8 +444,21 @@ const Guests = () => {
           </button>
           <button
             onClick={() => {
+              setShowGroupForm(true);
+              setShowAddForm(false);
+              setShowBulkForm(false);
+            }}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-purple-200 text-purple-500 hover:bg-purple-50 transition-colors"
+            data-testid="button-add-group"
+            title="그룹 하객 추가"
+          >
+            <FaUsers />
+          </button>
+          <button
+            onClick={() => {
               setShowAddForm(true);
               setShowBulkForm(false);
+              setShowGroupForm(false);
             }}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-blush-400 text-white hover:bg-blush-500 transition-colors"
             data-testid="button-add-guest"
@@ -370,12 +474,14 @@ const Guests = () => {
         <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-full">
           <FaHeart className="text-blue-500 text-sm" />
           <span className="text-sm text-gray-600">신랑측</span>
-          <span className="font-bold text-blue-600">{groomGuests.length}</span>
+          <span className="font-bold text-blue-600">{groomGuests.length + groomGroupTotal}</span>
+          {groomGroupTotal > 0 && <span className="text-xs text-blue-400">({groomGuests.length}+{groomGroupTotal})</span>}
         </div>
         <div className="flex items-center gap-2 px-3 py-2 bg-pink-50 rounded-full">
           <FaHeart className="text-pink-500 text-sm" />
           <span className="text-sm text-gray-600">신부측</span>
-          <span className="font-bold text-pink-600">{brideGuests.length}</span>
+          <span className="font-bold text-pink-600">{brideGuests.length + brideGroupTotal}</span>
+          {brideGroupTotal > 0 && <span className="text-xs text-pink-400">({brideGuests.length}+{brideGroupTotal})</span>}
         </div>
         <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-full">
           <span className="text-sm text-gray-600">참석</span>
@@ -384,6 +490,11 @@ const Guests = () => {
         <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-full">
           <span className="text-sm text-gray-600">미정</span>
           <span className="font-bold text-yellow-600">{guests.filter((g) => g.attendance === 'pending').length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-full">
+          <FaUsers className="text-purple-500 text-sm" />
+          <span className="text-sm text-gray-600">총 예상</span>
+          <span className="font-bold text-purple-600">{getTotalEstimatedCount()}</span>
         </div>
       </div>
 
@@ -521,6 +632,206 @@ const Guests = () => {
             >
               {bulkRows.filter(r => r.name.trim()).length}명 일괄 저장
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 하객 추가/수정 폼 */}
+      {showGroupForm && (
+        <div className="card bg-purple-50">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              {editingGroupId ? '그룹 하객 수정' : '그룹 하객 추가'}
+            </h3>
+            <button
+              onClick={resetGroupForm}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <FaTimes />
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-500 mb-4">
+            부모님 지인, 친척 등 이름 없이 인원수만 관리하는 그룹을 추가하세요.
+          </p>
+
+          {groupFormError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">
+              {groupFormError}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">그룹명 *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={groupFormData.name}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, name: e.target.value })}
+                  placeholder="예: 아버지 지인, 어머니 친척"
+                  data-testid="input-group-name"
+                />
+              </div>
+              <div>
+                <label className="label">예상 인원수 *</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={groupFormData.estimatedCount}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, estimatedCount: Math.max(1, Number(e.target.value)) })}
+                  min={1}
+                  data-testid="input-group-count"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">구분 *</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setGroupFormData({ ...groupFormData, side: 'groom' })}
+                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                    groupFormData.side === 'groom'
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                  data-testid="button-group-groom"
+                >
+                  <FaHeart className={groupFormData.side === 'groom' ? 'text-white' : 'text-blue-400'} />
+                  신랑측
+                </button>
+                <button
+                  onClick={() => setGroupFormData({ ...groupFormData, side: 'bride' })}
+                  className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                    groupFormData.side === 'bride'
+                      ? 'bg-pink-500 text-white shadow-md'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                  data-testid="button-group-bride"
+                >
+                  <FaHeart className={groupFormData.side === 'bride' ? 'text-white' : 'text-pink-400'} />
+                  신부측
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="label">메모</label>
+              <textarea
+                className="input-field"
+                value={groupFormData.memo}
+                onChange={(e) => setGroupFormData({ ...groupFormData, memo: e.target.value })}
+                placeholder="메모 (선택사항)"
+                rows={2}
+                data-testid="textarea-group-memo"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button onClick={resetGroupForm} className="btn-secondary flex-1">
+                취소
+              </button>
+              <button
+                onClick={editingGroupId ? handleUpdateGroupGuest : handleAddGroupGuest}
+                className="btn-primary flex-1"
+                data-testid="button-save-group"
+              >
+                {editingGroupId ? '수정' : '추가'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 하객 목록 */}
+      {groupGuests.length > 0 && (
+        <div className="card !p-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 p-4 border-b border-gray-100 bg-purple-50">
+            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+              <FaUsers className="text-purple-500" />
+              그룹 하객 <span className="text-purple-500">({groupGuests.length}그룹, {groupGuests.reduce((sum, g) => sum + g.estimatedCount, 0)}명)</span>
+            </h2>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {groupGuests.map((group) => (
+              <div 
+                key={group.id} 
+                className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                data-testid={`group-row-${group.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                    group.side === 'groom' ? 'bg-blue-400' : 'bg-pink-400'
+                  }`}>
+                    {group.estimatedCount}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-800">{group.name}</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        group.side === 'groom' 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : 'bg-pink-50 text-pink-600'
+                      }`}>
+                        <FaHeart className="text-[10px]" />
+                        {group.side === 'groom' ? '신랑' : '신부'}
+                      </span>
+                    </div>
+                    {group.memo && (
+                      <p className="text-xs text-gray-500 mt-0.5">{group.memo}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleEditGroupGuest(group.id)}
+                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                    data-testid={`button-edit-group-${group.id}`}
+                  >
+                    <FaEdit className="text-sm" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteGroupConfirmId(group.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    data-testid={`button-delete-group-${group.id}`}
+                  >
+                    <FaTrash className="text-sm" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 하객 삭제 확인 모달 */}
+      {deleteGroupConfirmId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteGroupConfirmId(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <FaTrash className="text-red-500 text-lg" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">그룹 하객 삭제</h3>
+            <p className="text-gray-600 mb-6">
+              '{groupGuests.find(g => g.id === deleteGroupConfirmId)?.name}' 그룹을 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteGroupConfirmId(null)}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDeleteGroupConfirm(deleteGroupConfirmId)}
+                className="flex-1 py-2.5 px-4 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+                data-testid="button-confirm-delete-group"
+              >
+                삭제
+              </button>
+            </div>
           </div>
         </div>
       )}
