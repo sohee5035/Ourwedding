@@ -5,13 +5,14 @@ import {
   type ChecklistItem, type InsertChecklistItem,
   type BudgetItem, type InsertBudgetItem,
   type Guest, type InsertGuest,
+  type GroupGuest, type InsertGroupGuest,
   type SharedNote, type InsertSharedNote,
   type Couple, type InsertCouple,
   type Member, type InsertMember,
   type CalendarEvent, type InsertCalendarEvent,
   type EventCategory, type InsertEventCategory,
   type AdminSettings, type InsertAdminSettings,
-  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, sharedNotes, couples, members, calendarEvents, eventCategories, adminSettings
+  weddingInfo, venues, venueQuotes, checklistItems, budgetItems, guests, groupGuests, sharedNotes, couples, members, calendarEvents, eventCategories, adminSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -53,6 +54,12 @@ export interface IStorage {
   createGuest(guest: InsertGuest): Promise<Guest>;
   updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest>;
   deleteGuest(id: string): Promise<void>;
+
+  // Group Guests - filtered by coupleId
+  getGroupGuests(coupleId: string): Promise<GroupGuest[]>;
+  createGroupGuest(groupGuest: InsertGroupGuest): Promise<GroupGuest>;
+  updateGroupGuest(id: string, groupGuest: Partial<InsertGroupGuest>): Promise<GroupGuest>;
+  deleteGroupGuest(id: string): Promise<void>;
 
   // Shared Notes
   getSharedNotes(): Promise<SharedNote[]>;
@@ -282,6 +289,29 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGuest(id: string): Promise<void> {
     await db.delete(guests).where(eq(guests.id, id));
+  }
+
+  // Group Guests - filtered by coupleId
+  async getGroupGuests(coupleId: string): Promise<GroupGuest[]> {
+    return await db.select().from(groupGuests).where(eq(groupGuests.coupleId, coupleId)).orderBy(groupGuests.createdAt);
+  }
+
+  async createGroupGuest(groupGuest: InsertGroupGuest): Promise<GroupGuest> {
+    const [created] = await db.insert(groupGuests).values(groupGuest).returning();
+    return created;
+  }
+
+  async updateGroupGuest(id: string, groupGuest: Partial<InsertGroupGuest>): Promise<GroupGuest> {
+    const [updated] = await db
+      .update(groupGuests)
+      .set(groupGuest)
+      .where(eq(groupGuests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGroupGuest(id: string): Promise<void> {
+    await db.delete(groupGuests).where(eq(groupGuests.id, id));
   }
 
   // Shared Notes

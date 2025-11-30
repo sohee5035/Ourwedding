@@ -108,6 +108,16 @@ export const guests = pgTable("guests", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const groupGuests = pgTable("group_guests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  side: text("side").notNull(),
+  estimatedCount: integer("estimated_count").notNull().default(1),
+  memo: text("memo"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const sharedNotes = pgTable("shared_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   coupleId: varchar("couple_id").references(() => couples.id, { onDelete: 'cascade' }),
@@ -187,6 +197,11 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   createdAt: true,
 });
 
+export const insertGroupGuestSchema = createInsertSchema(groupGuests).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertSharedNoteSchema = createInsertSchema(sharedNotes).omit({
   id: true,
   createdAt: true,
@@ -229,6 +244,9 @@ export type BudgetItem = typeof budgetItems.$inferSelect;
 
 export type InsertGuest = z.infer<typeof insertGuestSchema>;
 export type Guest = typeof guests.$inferSelect;
+
+export type InsertGroupGuest = z.infer<typeof insertGroupGuestSchema>;
+export type GroupGuest = typeof groupGuests.$inferSelect;
 
 export type InsertSharedNote = z.infer<typeof insertSharedNoteSchema>;
 export type SharedNote = typeof sharedNotes.$inferSelect;
