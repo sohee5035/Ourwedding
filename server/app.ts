@@ -2,7 +2,8 @@ import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 
 declare module "express-session" {
@@ -26,14 +27,20 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
-const MemoryStoreSession = MemoryStore(session);
+const PgSession = connectPgSimple(session);
+
+const sessionPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'wedding-planner-secret-key',
   resave: false,
   saveUninitialized: false,
-  store: new MemoryStoreSession({
-    checkPeriod: 86400000 // prune expired entries every 24h
+  store: new PgSession({
+    pool: sessionPool,
+    tableName: 'session',
+    createTableIfMissing: true,
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
@@ -97,14 +104,8 @@ export default async function runApp(
     throw err;
   });
 
-  // importantly run the final setup after setting up all the other routes so
-  // the catch-all route doesn't interfere with the other routes
   await setup(app, server);
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
