@@ -613,10 +613,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { name, password, role } = registerSchema.parse(req.body);
-      
+
       const inviteCode = generateInviteCode();
       const couple = await storage.createCouple({ inviteCode });
-      
+
       const pinHash = await hashPassword(password);
       const member = await storage.createMember({
         coupleId: couple.id,
@@ -625,13 +625,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hashAlgorithm: 'bcrypt',
         role,
       });
-      
+
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
-      
-      res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
-        couple: { id: couple.id, inviteCode: couple.inviteCode },
+
+      // Explicitly save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+
+        res.status(201).json({
+          member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
+          couple: { id: couple.id, inviteCode: couple.inviteCode },
+        });
       });
     } catch (error) {
       console.error(error);
@@ -674,25 +682,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/join", async (req, res) => {
     try {
       const { name, password, inviteCode } = joinSchema.parse(req.body);
-      
+
       const couple = await storage.getCoupleByInviteCode(inviteCode.toUpperCase());
       if (!couple) {
         return res.status(400).json({ error: "잘못된 초대 코드입니다" });
       }
-      
+
       const existingMembers = await storage.getMembersByCouple(couple.id);
       if (existingMembers.length >= 2) {
         return res.status(400).json({ error: "이미 커플이 완성되었습니다" });
       }
-      
+
       const sameNameInCouple = await storage.getMemberByNameInCouple(couple.id, name);
       if (sameNameInCouple) {
         return res.status(400).json({ error: "같은 커플 내에 동일한 이름이 있습니다" });
       }
-      
+
       const firstMemberRole = existingMembers[0]?.role || 'bride';
       const role = firstMemberRole === 'bride' ? 'groom' : 'bride';
-      
+
       const pinHash = await hashPassword(password);
       const member = await storage.createMember({
         coupleId: couple.id,
@@ -701,13 +709,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hashAlgorithm: 'bcrypt',
         role,
       });
-      
+
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
-      
-      res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
-        couple: { id: couple.id },
+
+      // Explicitly save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+
+        res.status(201).json({
+          member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
+          couple: { id: couple.id },
+        });
       });
     } catch (error) {
       console.error(error);
@@ -724,30 +740,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { name, password } = loginSchema.parse(req.body);
-      
+
       const member = await storage.getMemberByName(name);
       if (!member) {
         return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
       }
-      
+
       const isValid = await verifyPassword(password, member.pinHash, member.hashAlgorithm || 'sha256');
       if (!isValid) {
         return res.status(401).json({ error: "이름 또는 비밀번호가 올바르지 않습니다" });
       }
-      
+
       if (member.hashAlgorithm !== 'bcrypt') {
         const newHash = await hashPassword(password);
         await storage.updateMemberPassword(member.id, newHash, 'bcrypt');
       }
-      
+
       req.session.memberId = member.id;
       req.session.coupleId = member.coupleId;
-      
-      const couple = member.coupleId ? await storage.getCouple(member.coupleId) : null;
-      
-      res.json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId },
-        couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
+
+      // Explicitly save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+
+        const couple = member.coupleId ? storage.getCouple(member.coupleId) : Promise.resolve(null);
+        couple.then((coupleData) => {
+          res.json({
+            member: { id: member.id, name: member.name, coupleId: member.coupleId },
+            couple: coupleData ? { id: coupleData.id, inviteCode: coupleData.inviteCode } : null,
+          });
+        }).catch((error) => {
+          console.error(error);
+          res.status(500).json({ error: "커플 정보를 가져오는데 실패했습니다" });
+        });
       });
     } catch (error) {
       console.error(error);
@@ -800,9 +828,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { password } = adminLoginSchema.parse(req.body);
-      
+
       const adminSettings = await storage.getAdminSettings();
-      
+
       if (adminSettings) {
         const isValid = await verifyPassword(password, adminSettings.passwordHash, adminSettings.hashAlgorithm);
         if (!isValid) {
@@ -816,9 +844,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const hashedPassword = await hashPassword(envPassword);
         await storage.createAdminSettings({ passwordHash: hashedPassword, hashAlgorithm: 'bcrypt' });
       }
-      
+
       req.session.isAdmin = true;
-      res.json({ success: true });
+
+      // Explicitly save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+
+        res.json({ success: true });
+      });
     } catch (error) {
       console.error(error);
       res.status(400).json({ error: "로그인에 실패했습니다" });
