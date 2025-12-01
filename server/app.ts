@@ -36,21 +36,32 @@ const sessionPool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Add error handling for session pool
+sessionPool.on('error', (err) => {
+  console.error('Unexpected error on session pool client:', err);
+});
+
+const sessionStore = new PgSession({
+  pool: sessionPool,
+  tableName: 'session',
+  createTableIfMissing: true,
+  errorLog: (err) => {
+    console.error('Session store error:', err);
+  }
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'wedding-planner-secret-key',
   resave: false,
   saveUninitialized: false,
-  store: new PgSession({
-    pool: sessionPool,
-    tableName: 'session',
-    createTableIfMissing: true,
-  }),
+  store: sessionStore,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax', // Use 'lax' for same-origin deployments (Render)
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-  }
+  },
+  rolling: true, // Reset cookie maxAge on every response
 }));
 
 declare module 'http' {

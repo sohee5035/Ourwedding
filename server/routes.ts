@@ -57,6 +57,13 @@ function generateInviteCode(): string {
 function requireAuth(req: any, res: any): string | null {
   const coupleId = req.session?.coupleId;
   if (!coupleId) {
+    console.error('Auth failed - Session data:', {
+      sessionExists: !!req.session,
+      sessionID: req.sessionID,
+      memberId: req.session?.memberId,
+      coupleId: req.session?.coupleId,
+      cookie: req.session?.cookie
+    });
     res.status(401).json({ error: "로그인이 필요합니다" });
     return null;
   }
@@ -765,6 +772,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session save error:', err);
           return res.status(500).json({ error: "세션 저장에 실패했습니다" });
         }
+
+        console.log('Session saved successfully:', {
+          sessionID: req.sessionID,
+          memberId: req.session.memberId,
+          coupleId: req.session.coupleId,
+          cookie: req.session.cookie
+        });
 
         const couple = member.coupleId ? storage.getCouple(member.coupleId) : Promise.resolve(null);
         couple.then((coupleData) => {
