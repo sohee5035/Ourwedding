@@ -58,10 +58,14 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax', // Use 'lax' for same-origin deployments (Render)
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    path: '/',
+    domain: process.env.COOKIE_DOMAIN || undefined, // Let browser set domain automatically
   },
+  proxy: true, // Trust the reverse proxy for secure cookies
   rolling: true, // Reset cookie maxAge on every response
+  name: 'sessionId', // Explicit session cookie name
 }));
 
 declare module 'http' {
@@ -80,6 +84,16 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Log session and cookie info for auth-related requests
+  if (path.startsWith("/api/auth") || path.startsWith("/api/notes") || path.startsWith("/api/wedding-info")) {
+    console.log(`[${req.method} ${path}] Cookie header:`, req.headers.cookie || 'NO COOKIE');
+    console.log(`[${req.method} ${path}] Session ID:`, req.sessionID || 'NO SESSION');
+    console.log(`[${req.method} ${path}] Session data:`, {
+      memberId: req.session?.memberId,
+      coupleId: req.session?.coupleId
+    });
+  }
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
