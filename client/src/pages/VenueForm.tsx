@@ -73,26 +73,36 @@ const VenueForm = () => {
       return;
     }
 
-    if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+    if (!window.kakao || !window.kakao.maps) {
       alert('카카오맵이 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       return;
     }
 
     setIsSearching(true);
-    const ps = new window.kakao.maps.services.Places();
 
-    ps.keywordSearch(searchKeyword, (data: any, status: any) => {
-      setIsSearching(false);
-      if (status === window.kakao.maps.services.Status.OK) {
-        setSearchResults(data);
-        setShowSearchResults(true);
-      } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
-        alert('검색 결과가 없습니다.');
-        setSearchResults([]);
-      } else {
-        alert('검색 중 오류가 발생했습니다.');
-        setSearchResults([]);
+    // 카카오맵 SDK 로드 후 검색
+    window.kakao.maps.load(() => {
+      if (!window.kakao.maps.services) {
+        alert('카카오맵 서비스를 사용할 수 없습니다.');
+        setIsSearching(false);
+        return;
       }
+
+      const ps = new window.kakao.maps.services.Places();
+
+      ps.keywordSearch(searchKeyword, (data: any, status: any) => {
+        setIsSearching(false);
+        if (status === window.kakao.maps.services.Status.OK) {
+          setSearchResults(data);
+          setShowSearchResults(true);
+        } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
+          alert('검색 결과가 없습니다.');
+          setSearchResults([]);
+        } else {
+          alert('검색 중 오류가 발생했습니다.');
+          setSearchResults([]);
+        }
+      });
     });
   };
 
@@ -111,19 +121,25 @@ const VenueForm = () => {
 
   // 주소로 좌표 찾기 (Geocoding)
   const geocodeAddress = (address: string) => {
-    if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+    if (!window.kakao || !window.kakao.maps) {
       return;
     }
 
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    geocoder.addressSearch(address, (result: any, status: any) => {
-      if (status === window.kakao.maps.services.Status.OK) {
-        setFormData(prev => ({
-          ...prev,
-          lat: parseFloat(result[0].y),
-          lng: parseFloat(result[0].x),
-        }));
+    window.kakao.maps.load(() => {
+      if (!window.kakao.maps.services) {
+        return;
       }
+
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.addressSearch(address, (result: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+          setFormData(prev => ({
+            ...prev,
+            lat: parseFloat(result[0].y),
+            lng: parseFloat(result[0].x),
+          }));
+        }
+      });
     });
   };
 
