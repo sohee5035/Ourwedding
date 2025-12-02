@@ -28,6 +28,7 @@ const Guests = () => {
   const [csvUploadResult, setCsvUploadResult] = useState<{ count: number; show: boolean } | null>(null);
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
   const [bulkActionResult, setBulkActionResult] = useState<{ message: string; show: boolean } | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -437,6 +438,22 @@ const Guests = () => {
     clearSelection();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedGuests.size === 0) return;
+
+    const selectedGuestIds = Array.from(selectedGuests);
+    const count = selectedGuestIds.length;
+
+    for (const guestId of selectedGuestIds) {
+      await deleteGuest(guestId);
+    }
+
+    setBulkActionResult({ message: `${count}명의 하객을 삭제했습니다.`, show: true });
+    setTimeout(() => setBulkActionResult(null), 3000);
+    clearSelection();
+    setShowBulkDeleteConfirm(false);
+  };
+
   const groomGuests = getGuestsBySide('groom');
   const brideGuests = getGuestsBySide('bride');
   const groomGroupGuests = getGroupGuestsBySide('groom');
@@ -576,42 +593,82 @@ const Guests = () => {
         </div>
       )}
 
-      {/* 일괄 작업 버튼 */}
+      {/* 일괄 작업 버튼 - 플로팅 */}
       {selectedGuests.size > 0 && (
-        <div className="card bg-blue-50 border-2 border-blue-200">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <FaCheckSquare className="text-blue-500 text-lg" />
-              <span className="font-medium text-gray-800">{selectedGuests.size}명 선택됨</span>
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-blue-200 px-6 py-4 max-w-4xl">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <FaCheckSquare className="text-blue-500 text-xl" />
+                <span className="font-bold text-gray-800 text-lg">{selectedGuests.size}명 선택됨</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={handleBulkSendInvitations}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  data-testid="button-bulk-send-invitations"
+                >
+                  <FaEnvelope /> 청첩장 체크
+                </button>
+                <button
+                  onClick={() => handleBulkAttendanceChange('attending')}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  data-testid="button-bulk-attending"
+                >
+                  <FaCheck /> 참석 처리
+                </button>
+                <button
+                  onClick={() => handleBulkAttendanceChange('declined')}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  data-testid="button-bulk-declined"
+                >
+                  <FaTimes /> 불참 처리
+                </button>
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  data-testid="button-bulk-delete"
+                >
+                  <FaTrash /> 삭제
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-4 py-2.5 bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-200 transition-all hover:scale-105 text-sm font-medium"
+                  data-testid="button-clear-selection"
+                >
+                  취소
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 삭제 확인 모달 */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={() => setShowBulkDeleteConfirm(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <FaTrash className="text-red-500 text-2xl" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-3">일괄 삭제</h3>
+            <p className="text-gray-600 mb-6">
+              선택한 <span className="font-bold text-red-500">{selectedGuests.size}명</span>의 하객을 삭제하시겠습니까?<br />
+              <span className="text-sm text-gray-500">이 작업은 되돌릴 수 없습니다.</span>
+            </p>
+            <div className="flex gap-3">
               <button
-                onClick={handleBulkSendInvitations}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
-                data-testid="button-bulk-send-invitations"
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 py-3 px-4 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
               >
-                <FaEnvelope /> 일괄 청첩장 발송
+                취소
               </button>
               <button
-                onClick={() => handleBulkAttendanceChange('attending')}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
-                data-testid="button-bulk-attending"
+                onClick={handleBulkDelete}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+                data-testid="button-confirm-bulk-delete"
               >
-                <FaCheck /> 일괄 참석 처리
-              </button>
-              <button
-                onClick={() => handleBulkAttendanceChange('declined')}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                data-testid="button-bulk-declined"
-              >
-                <FaTimes /> 일괄 불참 처리
-              </button>
-              <button
-                onClick={clearSelection}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                data-testid="button-clear-selection"
-              >
-                선택 취소
+                삭제
               </button>
             </div>
           </div>
