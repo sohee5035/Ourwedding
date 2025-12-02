@@ -135,7 +135,7 @@ const Home = () => {
     <div className="flex flex-col min-h-[calc(100vh-140px)]">
       {!isEditing ? (
         <div 
-          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-4 cursor-pointer"
+          className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-2 cursor-pointer"
           onClick={handleHeaderCardClick}
           data-testid="header-card"
         >
@@ -223,19 +223,19 @@ const Home = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-gray-800">공유 메모</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-bold text-gray-800">공유 메모</h2>
         <span className="text-xs text-gray-500">{member?.name}으로 작성</span>
       </div>
 
-      <div className={`${notes.length > 0 ? 'flex-1 overflow-y-auto' : ''} space-y-3 pr-1 mb-4`}>
+      <div className={`${notes.length > 0 ? 'flex-1 overflow-y-auto' : ''} space-y-2 pr-1 mb-2`}>
         {isLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <p className="text-gray-500">메모를 불러오는 중...</p>
+          <div className="flex items-center justify-center py-3">
+            <p className="text-gray-500 text-sm">메모를 불러오는 중...</p>
           </div>
         ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <FaHeart className="text-3xl text-blush-300 mb-2" />
+          <div className="flex flex-col items-center justify-center py-4 text-center">
+            <FaHeart className="text-2xl text-blush-300 mb-1" />
             <p className="text-gray-500 text-sm">아직 메모가 없어요</p>
             <p className="text-xs text-gray-400">결혼 준비하면서 이야기를 나눠보세요!</p>
           </div>
