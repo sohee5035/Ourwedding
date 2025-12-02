@@ -36,7 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
                   href="/auth"
                   className="px-4 py-2 bg-white text-blush-500 rounded-lg font-bold text-sm hover:bg-blush-50 transition-colors whitespace-nowrap"
                 >
-                  시작하기
+                  Login
                 </Link>
                 <button
                   onClick={() => setBannerDismissed(true)}

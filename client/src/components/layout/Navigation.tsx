@@ -81,7 +81,7 @@ const Navigation = () => {
                   data-testid="button-login"
                 >
                   <FaSignInAlt />
-                  <span className="font-medium">시작하기</span>
+                  <span className="font-medium">Login</span>
                 </Link>
               )}
             </div>
@@ -114,7 +114,7 @@ const Navigation = () => {
               data-testid="button-login-mobile"
             >
               <FaSignInAlt className="text-xs" />
-              <span>시작</span>
+              <span>Login</span>
             </Link>
           )}
         </div>
