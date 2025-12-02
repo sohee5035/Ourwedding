@@ -1,8 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useVenueStore } from '../store/venueStore';
-import { FaSave, FaTimes, FaPlus, FaCamera, FaTrash, FaSpinner } from 'react-icons/fa';
+import { FaSave, FaTimes, FaPlus, FaCamera, FaTrash, FaSpinner, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import type { VenuePhoto } from '../types';
+
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
+
+interface SearchResult {
+  place_name: string;
+  address_name: string;
+  road_address_name: string;
+  x: string; // lng
+  y: string; // lat
+  place_url: string;
+}
 
 const VenueForm = () => {
   const [, params] = useRoute('/venues/edit/:id');
@@ -18,10 +33,18 @@ const VenueForm = () => {
     name: '',
     address: '',
     nearestStation: '',
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
     photos: [] as VenuePhoto[],
   });
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // 장소 검색 관련 state
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   useEffect(() => {
     fetchVenues();
@@ -35,11 +58,74 @@ const VenueForm = () => {
           name: venue.name,
           address: venue.address,
           nearestStation: venue.nearestStation || '',
+          lat: venue.lat,
+          lng: venue.lng,
           photos: venue.photos || [],
         });
       }
     }
   }, [id, isEdit, getVenueById]);
+
+  // 장소 검색 함수
+  const handlePlaceSearch = () => {
+    if (!searchKeyword.trim()) {
+      alert('검색어를 입력해주세요.');
+      return;
+    }
+
+    if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+      alert('카카오맵이 로드되지 않았습니다. 페이지를 새로고침해주세요.');
+      return;
+    }
+
+    setIsSearching(true);
+    const ps = new window.kakao.maps.services.Places();
+
+    ps.keywordSearch(searchKeyword, (data: any, status: any) => {
+      setIsSearching(false);
+      if (status === window.kakao.maps.services.Status.OK) {
+        setSearchResults(data);
+        setShowSearchResults(true);
+      } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
+        alert('검색 결과가 없습니다.');
+        setSearchResults([]);
+      } else {
+        alert('검색 중 오류가 발생했습니다.');
+        setSearchResults([]);
+      }
+    });
+  };
+
+  // 장소 선택 함수
+  const handleSelectPlace = (place: SearchResult) => {
+    setFormData({
+      ...formData,
+      name: place.place_name,
+      address: place.road_address_name || place.address_name,
+      lat: parseFloat(place.y),
+      lng: parseFloat(place.x),
+    });
+    setShowSearchResults(false);
+    setSearchKeyword('');
+  };
+
+  // 주소로 좌표 찾기 (Geocoding)
+  const geocodeAddress = (address: string) => {
+    if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+      return;
+    }
+
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (result: any, status: any) => {
+      if (status === window.kakao.maps.services.Status.OK) {
+        setFormData(prev => ({
+          ...prev,
+          lat: parseFloat(result[0].y),
+          lng: parseFloat(result[0].x),
+        }));
+      }
+    });
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -145,6 +231,64 @@ const VenueForm = () => {
 
       <form onSubmit={handleSubmit} className="card space-y-6">
         <div className="space-y-4">
+          {/* 장소 검색 */}
+          <div className="bg-gradient-to-r from-blush-50 to-lavender-50 p-4 rounded-lg border border-blush-200">
+            <label className="label text-blush-700 mb-2">
+              <FaSearch className="inline mr-2" />
+              웨딩홀 검색으로 빠르게 추가하기
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="input-field flex-1"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handlePlaceSearch())}
+                placeholder="웨딩홀 이름을 검색하세요 (예: 그랜드컨벤션센터)"
+              />
+              <button
+                type="button"
+                onClick={handlePlaceSearch}
+                disabled={isSearching}
+                className="btn-primary px-4 whitespace-nowrap"
+              >
+                {isSearching ? <FaSpinner className="animate-spin" /> : <FaSearch />}
+              </button>
+            </div>
+
+            {/* 검색 결과 */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="mt-3 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+                {searchResults.map((place, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleSelectPlace(place)}
+                    className="w-full text-left p-3 hover:bg-blush-50 border-b border-gray-100 last:border-0 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <FaMapMarkerAlt className="text-blush-500 mt-1 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 truncate">{place.place_name}</p>
+                        <p className="text-sm text-gray-600 truncate">
+                          {place.road_address_name || place.address_name}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-600 mt-2">
+              💡 검색으로 선택하면 이름, 주소, 위치가 자동으로 입력됩니다
+            </p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-500 mb-4">또는 직접 입력하기</p>
+          </div>
+
           <div>
             <label className="label">웨딩홀 이름 *</label>
             <input
@@ -165,10 +309,24 @@ const VenueForm = () => {
               className="input-field"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onBlur={(e) => {
+                if (e.target.value.trim()) {
+                  geocodeAddress(e.target.value);
+                }
+              }}
               placeholder="주소를 입력하세요"
               required
               data-testid="input-venue-address"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              주소 입력 후 다른 곳을 클릭하면 자동으로 지도 위치가 설정됩니다
+            </p>
+            {formData.lat && formData.lng && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <FaMapMarkerAlt />
+                위치 확인됨 ({formData.lat.toFixed(6)}, {formData.lng.toFixed(6)})
+              </p>
+            )}
           </div>
 
           <div>

@@ -1,13 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useVenueStore } from '../store/venueStore';
 import { Link } from 'wouter';
 import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock, FaList, FaMap, FaTimes, FaBuilding } from 'react-icons/fa';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Icon } from 'leaflet';
 import type { VenueQuote, WeddingVenue } from '../types';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import 'leaflet/dist/leaflet.css';
+
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
 
 import {
   Drawer,
@@ -16,28 +19,6 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from '@/components/ui/drawer';
-
-const customIcon = new Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-function MapController({ center, zoom }: { center: [number, number] | null; zoom: number }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (center) {
-      map.setView(center, zoom);
-    }
-  }, [center, zoom, map]);
-  
-  return null;
-}
 
 interface QuoteWithVenue extends VenueQuote {
   venue: WeddingVenue;
@@ -58,23 +39,71 @@ const Venues = () => {
   const [selectedVenue, setSelectedVenue] = useState<WeddingVenue | null>(null);
   const [selectedQuotes, setSelectedQuotes] = useState<VenueQuote[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
-  const [mapZoom, setMapZoom] = useState(8);
+
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
     fetchVenues();
     fetchVenueQuotes();
   }, [fetchVenues, fetchVenueQuotes]);
 
+  // 카카오맵 초기화
   useEffect(() => {
-    if (venues.length > 0 && !mapCenter) {
+    if (viewMode !== 'map' || !window.kakao || !window.kakao.maps) return;
+
+    const container = document.getElementById('kakao-map');
+    if (!container) return;
+
+    // 기본 서울 중심 좌표
+    const defaultCenter = new window.kakao.maps.LatLng(37.5665, 126.978);
+
+    // 지도 옵션
+    const options = {
+      center: defaultCenter,
+      level: 8
+    };
+
+    // 지도 생성
+    const map = new window.kakao.maps.Map(container, options);
+    mapRef.current = map;
+
+    // 기존 마커 제거
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // 웨딩홀 마커 추가
+    venues.forEach((venue) => {
+      if (!venue.lat || !venue.lng) return;
+
+      const position = new window.kakao.maps.LatLng(venue.lat, venue.lng);
+      const marker = new window.kakao.maps.Marker({
+        position: position,
+        map: map
+      });
+
+      // 마커 클릭 이벤트
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        handleMarkerClick(venue);
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    // 첫 번째 웨딩홀로 중심 이동
+    if (venues.length > 0) {
       const venueWithCoords = venues.find(v => v.lat && v.lng);
       if (venueWithCoords && venueWithCoords.lat && venueWithCoords.lng) {
-        setMapCenter([venueWithCoords.lat, venueWithCoords.lng]);
-        setMapZoom(10);
+        const center = new window.kakao.maps.LatLng(venueWithCoords.lat, venueWithCoords.lng);
+        map.setCenter(center);
+        map.setLevel(10);
       }
     }
-  }, [venues, mapCenter]);
+
+    return () => {
+      markersRef.current.forEach(marker => marker.setMap(null));
+    };
+  }, [viewMode, venues]);
 
   const venuesWithQuotes = getVenuesWithQuotes();
 
@@ -117,9 +146,10 @@ const Venues = () => {
   const handleMarkerClick = (venue: WeddingVenue) => {
     setSelectedVenue(venue);
     setSelectedQuotes(getQuotesByVenueId(venue.id));
-    if (venue.lat && venue.lng) {
-      setMapCenter([venue.lat, venue.lng]);
-      setMapZoom(14);
+    if (venue.lat && venue.lng && mapRef.current) {
+      const position = new window.kakao.maps.LatLng(venue.lat, venue.lng);
+      mapRef.current.setCenter(position);
+      mapRef.current.setLevel(4);
     }
     setIsDrawerOpen(true);
   };
@@ -129,8 +159,6 @@ const Venues = () => {
     setSelectedVenue(null);
     setSelectedQuotes([]);
   };
-
-  const defaultCenter: [number, number] = [37.5665, 126.978];
 
   const getLowestEstimate = (venueId: string): number | null => {
     if (!venueQuotes || venueQuotes.length === 0) return null;
@@ -577,46 +605,7 @@ const Venues = () => {
         </div>
       ) : (
         <div className="relative h-[60vh] md:h-[500px] rounded-xl overflow-hidden card p-0">
-          <MapContainer
-            center={mapCenter || defaultCenter}
-            zoom={mapZoom}
-            className="w-full h-full z-0"
-            zoomControl={false}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MapController center={mapCenter} zoom={mapZoom} />
-            
-            {venues.filter(v => v.lat && v.lng).map((venue) => {
-              const lowestEstimate = getLowestEstimate(venue.id);
-              return (
-                <Marker
-                  key={venue.id}
-                  position={[venue.lat!, venue.lng!]}
-                  icon={customIcon}
-                  eventHandlers={{
-                    click: () => handleMarkerClick(venue),
-                  }}
-                >
-                  <Popup>
-                    <div className="text-center">
-                      <strong>{venue.name}</strong>
-                      {lowestEstimate !== null && (
-                        <>
-                          <br />
-                          <span className="text-blush-500">
-                            {lowestEstimate.toLocaleString()}원~
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-          </MapContainer>
+          <div id="kakao-map" className="w-full h-full z-0"></div>
 
           <div className="absolute top-4 left-4 right-4 z-[1000]">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3">
