@@ -42,11 +42,11 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-gradient-to-r from-blush-300 to-blush-400 hover:from-blush-400 hover:to-blush-500 text-white font-medium px-6 py-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:translate-y-0;
+    @apply inline-flex items-center justify-center whitespace-nowrap bg-gradient-to-r from-blush-300 to-blush-400 hover:from-blush-400 hover:to-blush-500 text-white font-medium px-6 py-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:translate-y-0;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-blush-500 font-medium px-6 py-3 rounded-full border border-blush-200 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:translate-y-0;
+    @apply inline-flex items-center justify-center whitespace-nowrap bg-white hover:bg-gray-50 text-blush-500 font-medium px-6 py-3 rounded-full border border-blush-200 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:translate-y-0;
   }
 
   .card {

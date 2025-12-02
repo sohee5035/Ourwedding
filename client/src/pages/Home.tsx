@@ -132,7 +132,7 @@ const Home = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)]">
+    <div className="flex flex-col min-h-[calc(100vh-140px)]">
       {!isEditing ? (
         <div 
           className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-4 cursor-pointer"
@@ -228,16 +228,16 @@ const Home = () => {
         <span className="text-xs text-gray-500">{member?.name}으로 작성</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4">
+      <div className={`${notes.length > 0 ? 'flex-1 overflow-y-auto' : ''} space-y-3 pr-1 mb-4`}>
         {isLoading ? (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex items-center justify-center py-6">
             <p className="text-gray-500">메모를 불러오는 중...</p>
           </div>
         ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center">
-            <FaHeart className="text-4xl text-blush-300 mb-3" />
-            <p className="text-gray-500 mb-1">아직 메모가 없어요</p>
-            <p className="text-sm text-gray-400">결혼 준비하면서 이야기를 나눠보세요!</p>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <FaHeart className="text-3xl text-blush-300 mb-2" />
+            <p className="text-gray-500 text-sm">아직 메모가 없어요</p>
+            <p className="text-xs text-gray-400">결혼 준비하면서 이야기를 나눠보세요!</p>
           </div>
         ) : (
           notes.map((note) => (
