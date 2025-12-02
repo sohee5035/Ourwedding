@@ -315,7 +315,9 @@ const Home = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmitNote} className={`flex gap-2 items-end ${notes.length > 0 ? 'mt-auto' : 'mt-16'}`}>
+      <div className="h-16" />
+      
+      <form onSubmit={handleSubmitNote} className="fixed bottom-0 left-0 right-0 flex gap-2 items-end p-4 bg-ivory-50 border-t border-gray-100 md:static md:border-0 md:p-0 md:bg-transparent md:mt-auto">
         <textarea
           className="input-field flex-1 resize-none min-h-[44px] max-h-[120px]"
           value={noteContent}
