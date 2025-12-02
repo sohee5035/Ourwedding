@@ -1,15 +1,17 @@
 import { useWeddingInfoStore } from '../store/weddingInfoStore';
 import { useNotesStore } from '../store/notesStore';
 import { useAuthStore } from '../store/authStore';
-import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck, FaPen } from 'react-icons/fa';
+import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck, FaPen, FaSignInAlt } from 'react-icons/fa';
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useLocation } from 'wouter';
 
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
   const { notes, fetchNotes, addNote, updateNote, deleteNote, isLoading } = useNotesStore();
   const { member, couple, partner } = useAuthStore();
+  const [, setLocation] = useLocation();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,6 +22,7 @@ const Home = () => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteContent, setEditingNoteContent] = useState('');
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const getGroomName = () => {
     if (member?.role === 'groom') return member.name;
@@ -58,9 +61,26 @@ const Home = () => {
 
   const daysUntil = weddingInfo.getDaysUntilWedding();
 
+  const handleHeaderCardClick = () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
+    setIsEditing(true);
+  };
+
   const handleSave = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     await weddingInfo.updateInfo(formData);
     setIsEditing(false);
+  };
+
+  const handleGoToLogin = () => {
+    setShowLoginPopup(false);
+    setLocation('/auth');
   };
 
   const handleSubmitNote = async (e: React.FormEvent) => {
@@ -116,7 +136,7 @@ const Home = () => {
       {!isEditing ? (
         <div 
           className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-4 cursor-pointer"
-          onClick={() => setIsEditing(true)}
+          onClick={handleHeaderCardClick}
           data-testid="header-card"
         >
           <div className="flex items-center gap-3">
@@ -341,6 +361,38 @@ const Home = () => {
                 data-testid="button-confirm-delete"
               >
                 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-blush-100 rounded-full flex items-center justify-center">
+                <FaSignInAlt className="text-2xl text-blush-500" />
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">로그인이 필요해요</h3>
+            <p className="text-gray-600 mb-6 text-center text-sm">
+              결혼식 정보를 저장하려면 먼저 로그인해 주세요.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLoginPopup(false)}
+                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                data-testid="button-cancel-login"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleGoToLogin}
+                className="flex-1 py-2 rounded-lg bg-blush-400 text-white hover:bg-blush-500 transition-colors"
+                data-testid="button-go-to-login"
+              >
+                로그인하기
               </button>
             </div>
           </div>
