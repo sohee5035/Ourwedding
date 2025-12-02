@@ -52,9 +52,14 @@ const Venues = () => {
   useEffect(() => {
     if (viewMode !== 'map') return;
 
+    console.log('=== 카카오맵 초기화 시작 ===');
+    console.log('window.kakao:', window.kakao);
+    console.log('window.kakao.maps:', window.kakao?.maps);
+
     const initMap = () => {
       if (!window.kakao || !window.kakao.maps) {
         console.error('카카오맵 SDK가 로드되지 않았습니다.');
+        alert('카카오맵 SDK가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
         return;
       }
 
@@ -63,6 +68,8 @@ const Venues = () => {
         console.error('지도 컨테이너를 찾을 수 없습니다.');
         return;
       }
+
+      console.log('지도 컨테이너 찾음:', container);
 
       // 기본 서울 중심 좌표
       const defaultCenter = new window.kakao.maps.LatLng(37.5665, 126.978);
@@ -73,18 +80,25 @@ const Venues = () => {
         level: 8
       };
 
+      console.log('지도 생성 시도...');
       // 지도 생성
       const map = new window.kakao.maps.Map(container, options);
       mapRef.current = map;
+      console.log('지도 생성 완료!', map);
 
       // 기존 마커 제거
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
 
       // 웨딩홀 마커 추가
+      console.log('마커 추가할 웨딩홀 수:', venues.length);
       venues.forEach((venue) => {
-        if (!venue.lat || !venue.lng) return;
+        if (!venue.lat || !venue.lng) {
+          console.log('좌표 없는 웨딩홀:', venue.name);
+          return;
+        }
 
+        console.log('마커 추가:', venue.name, venue.lat, venue.lng);
         const position = new window.kakao.maps.LatLng(venue.lat, venue.lng);
         const marker = new window.kakao.maps.Marker({
           position: position,
@@ -99,6 +113,8 @@ const Venues = () => {
         markersRef.current.push(marker);
       });
 
+      console.log('총 추가된 마커 수:', markersRef.current.length);
+
       // 첫 번째 웨딩홀로 중심 이동
       if (venues.length > 0) {
         const venueWithCoords = venues.find(v => v.lat && v.lng);
@@ -106,22 +122,31 @@ const Venues = () => {
           const center = new window.kakao.maps.LatLng(venueWithCoords.lat, venueWithCoords.lng);
           map.setCenter(center);
           map.setLevel(10);
+          console.log('지도 중심 이동:', venueWithCoords.name);
         }
       }
     };
 
     // 카카오맵 SDK 로드 대기
     if (window.kakao && window.kakao.maps) {
+      console.log('카카오맵 SDK 로드됨, load() 호출');
       window.kakao.maps.load(() => {
+        console.log('kakao.maps.load() 콜백 실행');
         initMap();
       });
     } else {
+      console.log('카카오맵 SDK 아직 로드 안됨, 500ms 후 재시도');
       // SDK가 아직 로드되지 않았으면 잠시 후 재시도
       const timer = setTimeout(() => {
+        console.log('재시도 중...');
         if (window.kakao && window.kakao.maps) {
           window.kakao.maps.load(() => {
+            console.log('재시도 성공, 지도 초기화');
             initMap();
           });
+        } else {
+          console.error('재시도 실패 - 카카오맵 SDK 로드 실패');
+          alert('카카오맵을 로드할 수 없습니다. 인터넷 연결을 확인해주세요.');
         }
       }, 500);
       return () => clearTimeout(timer);
