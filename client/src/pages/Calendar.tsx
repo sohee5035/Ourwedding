@@ -350,18 +350,9 @@ const Calendar = () => {
               <button onClick={prevMonth} className="p-2 hover:bg-blush-100 rounded-full text-blush-600" data-testid="button-prev-month">
                 <FaChevronLeft />
               </button>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-gray-800">
-                  {format(currentDate, 'yyyy년 M월', { locale: ko })}
-                </h2>
-                <button 
-                  onClick={() => setIsCalendarExpanded(!isCalendarExpanded)}
-                  className="p-1.5 hover:bg-blush-100 rounded-full text-blush-500"
-                  data-testid="button-toggle-calendar"
-                >
-                  {isCalendarExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                </button>
-              </div>
+              <h2 className="text-xl font-bold text-gray-800">
+                {format(currentDate, 'yyyy년 M월', { locale: ko })}
+              </h2>
               <div className="flex gap-2">
                 <button onClick={today} className="px-3 py-1 text-sm bg-white border border-blush-200 rounded-full text-blush-600 hover:bg-blush-50" data-testid="button-today">
                   오늘
@@ -385,17 +376,16 @@ const Calendar = () => {
               ))}
             </div>
 
-            <div className={`grid grid-cols-7 bg-gray-50 transition-all duration-300 ${isCalendarExpanded ? '' : 'max-h-[200px] overflow-hidden'}`}>
+            <div className="grid grid-cols-7 bg-gray-50">
               {calendarDays.map((day) => {
                 const isSelectedMonth = isSameMonth(day, monthStart);
                 const isTodayDate = isSameDay(day, new Date());
-                
-                const dayItems = datedItems.filter(item => 
+
+                const dayItems = datedItems.filter(item =>
                   item.date && isSameDay(parseISO(item.date), day)
                 );
 
                 const dayEvents = getEventsForDay(day);
-                const colorBars = getColorBarsForDay(day);
 
                 return (
                   <div
@@ -404,11 +394,11 @@ const Calendar = () => {
                       const dayEvs = getEventsForDate(day);
                       if (dayEvs.length > 0) {
                         handleDateClick(day);
-                      } else if (!isCalendarExpanded) {
+                      } else {
                         openAddEventModal(format(day, 'yyyy-MM-dd'));
                       }
                     }}
-                    className={`${isCalendarExpanded ? 'min-h-[100px]' : 'min-h-[50px]'} bg-white border-b border-r border-gray-100 p-2 transition-colors hover:bg-gray-50 ${
+                    className={`min-h-[70px] bg-white border-b border-r border-gray-100 p-2 transition-colors hover:bg-gray-50 ${
                       !isSelectedMonth ? 'bg-gray-50/50' : ''
                     } cursor-pointer`}
                     data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
@@ -426,49 +416,27 @@ const Calendar = () => {
                         {format(day, 'd')}
                       </span>
                     </div>
-                    
-                    {isCalendarExpanded ? (
-                      <div className="mt-2 space-y-1">
-                        {dayEvents.map(event => {
-                          const categoryInfo = getCategoryInfo(event.category);
-                          const colorClasses = getColorClasses(categoryInfo.color);
-                          return (
-                            <button
-                              key={event.id}
-                              onClick={(e) => { e.stopPropagation(); openViewEventModal(event); }}
-                              className={`w-full text-left text-xs px-2 py-1 rounded truncate flex items-center gap-1 ${colorClasses.bgLight} hover:opacity-80 transition-colors`}
-                              title={event.title}
-                              data-testid={`calendar-event-${event.id}`}
-                            >
-                              <FaHeart className={`flex-shrink-0 ${colorClasses.text}`} />
-                              <span className="truncate text-gray-700">{event.title}</span>
-                              {event.time && (
-                                <span className="text-gray-500 flex-shrink-0 ml-auto">{event.time}</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                        {dayItems.map(item => (
-                          <div 
-                            key={item.id} 
-                            className={`text-xs px-2 py-1 rounded truncate ${
-                              item.completed 
-                                ? 'bg-gray-100 text-gray-400 line-through' 
-                                : 'bg-blush-100 text-blush-700'
-                            }`}
-                            title={item.title}
+
+                    <div className="flex gap-1 mt-2 flex-wrap justify-center">
+                      {dayEvents.slice(0, 4).map(event => {
+                        const categoryInfo = getCategoryInfo(event.category);
+                        const colorClasses = getColorClasses(categoryInfo.color);
+                        return (
+                          <button
+                            key={event.id}
+                            onClick={(e) => { e.stopPropagation(); openViewEventModal(event); }}
+                            className="hover:scale-110 transition-transform"
+                            title={event.title}
+                            data-testid={`calendar-event-${event.id}`}
                           >
-                            {item.title}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex gap-0.5 mt-1">
-                        {colorBars.map((color, idx) => (
-                          <div key={idx} className={`h-1.5 flex-1 rounded-full ${color}`} />
-                        ))}
-                      </div>
-                    )}
+                            <FaHeart className={`text-xs ${colorClasses.text}`} />
+                          </button>
+                        );
+                      })}
+                      {dayEvents.length > 4 && (
+                        <span className="text-[10px] text-gray-400 font-medium">+{dayEvents.length - 4}</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
