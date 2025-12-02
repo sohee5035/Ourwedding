@@ -132,7 +132,7 @@ const Home = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-140px)]">
+    <div className={`flex flex-col ${notes.length > 0 ? 'min-h-[calc(100vh-140px)]' : ''}`}>
       {!isEditing ? (
         <div 
           className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-2 cursor-pointer"
@@ -315,7 +315,7 @@ const Home = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmitNote} className="flex gap-2 mt-auto items-end">
+      <form onSubmit={handleSubmitNote} className={`flex gap-2 items-end ${notes.length > 0 ? 'mt-auto' : 'mt-2'}`}>
         <textarea
           className="input-field flex-1 resize-none min-h-[44px] max-h-[120px]"
           value={noteContent}
