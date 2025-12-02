@@ -605,28 +605,28 @@ const Guests = () => {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleBulkSendInvitations}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blush-400 text-white rounded-xl hover:bg-blush-500 transition-all hover:scale-105 text-sm font-medium shadow-md"
                   data-testid="button-bulk-send-invitations"
                 >
                   <FaEnvelope /> 청첩장 체크
                 </button>
                 <button
                   onClick={() => handleBulkAttendanceChange('attending')}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-emerald-400 text-white rounded-xl hover:bg-emerald-500 transition-all hover:scale-105 text-sm font-medium shadow-md"
                   data-testid="button-bulk-attending"
                 >
                   <FaCheck /> 참석 처리
                 </button>
                 <button
                   onClick={() => handleBulkAttendanceChange('declined')}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-rose-400 text-white rounded-xl hover:bg-rose-500 transition-all hover:scale-105 text-sm font-medium shadow-md"
                   data-testid="button-bulk-declined"
                 >
                   <FaTimes /> 불참 처리
                 </button>
                 <button
                   onClick={() => setShowBulkDeleteConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition-all hover:scale-105 text-sm font-medium shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all hover:scale-105 text-sm font-medium shadow-md"
                   data-testid="button-bulk-delete"
                 >
                   <FaTrash /> 삭제
