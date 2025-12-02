@@ -50,54 +50,81 @@ const Venues = () => {
 
   // 카카오맵 초기화
   useEffect(() => {
-    if (viewMode !== 'map' || !window.kakao || !window.kakao.maps) return;
+    if (viewMode !== 'map') return;
 
-    const container = document.getElementById('kakao-map');
-    if (!container) return;
+    const initMap = () => {
+      if (!window.kakao || !window.kakao.maps) {
+        console.error('카카오맵 SDK가 로드되지 않았습니다.');
+        return;
+      }
 
-    // 기본 서울 중심 좌표
-    const defaultCenter = new window.kakao.maps.LatLng(37.5665, 126.978);
+      const container = document.getElementById('kakao-map');
+      if (!container) {
+        console.error('지도 컨테이너를 찾을 수 없습니다.');
+        return;
+      }
 
-    // 지도 옵션
-    const options = {
-      center: defaultCenter,
-      level: 8
+      // 기본 서울 중심 좌표
+      const defaultCenter = new window.kakao.maps.LatLng(37.5665, 126.978);
+
+      // 지도 옵션
+      const options = {
+        center: defaultCenter,
+        level: 8
+      };
+
+      // 지도 생성
+      const map = new window.kakao.maps.Map(container, options);
+      mapRef.current = map;
+
+      // 기존 마커 제거
+      markersRef.current.forEach(marker => marker.setMap(null));
+      markersRef.current = [];
+
+      // 웨딩홀 마커 추가
+      venues.forEach((venue) => {
+        if (!venue.lat || !venue.lng) return;
+
+        const position = new window.kakao.maps.LatLng(venue.lat, venue.lng);
+        const marker = new window.kakao.maps.Marker({
+          position: position,
+          map: map
+        });
+
+        // 마커 클릭 이벤트
+        window.kakao.maps.event.addListener(marker, 'click', () => {
+          handleMarkerClick(venue);
+        });
+
+        markersRef.current.push(marker);
+      });
+
+      // 첫 번째 웨딩홀로 중심 이동
+      if (venues.length > 0) {
+        const venueWithCoords = venues.find(v => v.lat && v.lng);
+        if (venueWithCoords && venueWithCoords.lat && venueWithCoords.lng) {
+          const center = new window.kakao.maps.LatLng(venueWithCoords.lat, venueWithCoords.lng);
+          map.setCenter(center);
+          map.setLevel(10);
+        }
+      }
     };
 
-    // 지도 생성
-    const map = new window.kakao.maps.Map(container, options);
-    mapRef.current = map;
-
-    // 기존 마커 제거
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    // 웨딩홀 마커 추가
-    venues.forEach((venue) => {
-      if (!venue.lat || !venue.lng) return;
-
-      const position = new window.kakao.maps.LatLng(venue.lat, venue.lng);
-      const marker = new window.kakao.maps.Marker({
-        position: position,
-        map: map
+    // 카카오맵 SDK 로드 대기
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(() => {
+        initMap();
       });
-
-      // 마커 클릭 이벤트
-      window.kakao.maps.event.addListener(marker, 'click', () => {
-        handleMarkerClick(venue);
-      });
-
-      markersRef.current.push(marker);
-    });
-
-    // 첫 번째 웨딩홀로 중심 이동
-    if (venues.length > 0) {
-      const venueWithCoords = venues.find(v => v.lat && v.lng);
-      if (venueWithCoords && venueWithCoords.lat && venueWithCoords.lng) {
-        const center = new window.kakao.maps.LatLng(venueWithCoords.lat, venueWithCoords.lng);
-        map.setCenter(center);
-        map.setLevel(10);
-      }
+    } else {
+      // SDK가 아직 로드되지 않았으면 잠시 후 재시도
+      const timer = setTimeout(() => {
+        if (window.kakao && window.kakao.maps) {
+          window.kakao.maps.load(() => {
+            initMap();
+          });
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
 
     return () => {
