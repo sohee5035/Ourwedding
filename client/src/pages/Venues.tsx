@@ -50,9 +50,17 @@ const Venues = () => {
 
   // 카카오맵 초기화
   useEffect(() => {
-    if (viewMode !== 'map') return;
+    console.log('🔍 useEffect 실행됨!');
+    console.log('  - viewMode:', viewMode);
+    console.log('  - venues.length:', venues.length);
+    console.log('  - window.kakao:', window.kakao);
 
-    console.log('=== 카카오맵 초기화 시작 ===');
+    if (viewMode !== 'map') {
+      console.log('  ❌ viewMode가 map이 아니므로 종료');
+      return;
+    }
+
+    console.log('✅ 카카오맵 초기화 시작!');
     console.log('window.kakao:', window.kakao);
     console.log('window.kakao.maps:', window.kakao?.maps);
 
