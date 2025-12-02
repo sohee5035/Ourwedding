@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGuestStore } from '../store/guestStore';
 import { useAuthStore } from '../store/authStore';
-import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck, FaUsers } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck, FaUsers, FaCheckSquare, FaSquare, FaEnvelope } from 'react-icons/fa';
 import type { Guest, GroupGuest } from '../types';
 
 interface BulkGuestRow {
@@ -26,6 +26,8 @@ const Guests = () => {
   const [deleteGroupConfirmId, setDeleteGroupConfirmId] = useState<string | null>(null);
   const [attendanceDropdownId, setAttendanceDropdownId] = useState<string | null>(null);
   const [csvUploadResult, setCsvUploadResult] = useState<{ count: number; show: boolean } | null>(null);
+  const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
+  const [bulkActionResult, setBulkActionResult] = useState<{ message: string; show: boolean } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -382,6 +384,59 @@ const Guests = () => {
     setDeleteGroupConfirmId(null);
   };
 
+  // 일괄 선택 관련 함수
+  const toggleGuestSelection = (guestId: string) => {
+    setSelectedGuests((prev) => {
+      const next = new Set(prev);
+      if (next.has(guestId)) {
+        next.delete(guestId);
+      } else {
+        next.add(guestId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedGuests.size === filteredGuests.length && filteredGuests.length > 0) {
+      setSelectedGuests(new Set());
+    } else {
+      setSelectedGuests(new Set(filteredGuests.map((g) => g.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedGuests(new Set());
+  };
+
+  // 일괄 작업 함수
+  const handleBulkSendInvitations = async () => {
+    if (selectedGuests.size === 0) return;
+
+    const selectedGuestIds = Array.from(selectedGuests);
+    for (const guestId of selectedGuestIds) {
+      await updateGuest(guestId, { invitationSent: true });
+    }
+
+    setBulkActionResult({ message: `${selectedGuests.size}명에게 청첩장을 발송했습니다!`, show: true });
+    setTimeout(() => setBulkActionResult(null), 3000);
+    clearSelection();
+  };
+
+  const handleBulkAttendanceChange = async (attendance: 'attending' | 'declined') => {
+    if (selectedGuests.size === 0) return;
+
+    const selectedGuestIds = Array.from(selectedGuests);
+    for (const guestId of selectedGuestIds) {
+      await updateGuest(guestId, { attendance });
+    }
+
+    const statusText = attendance === 'attending' ? '참석' : '불참';
+    setBulkActionResult({ message: `${selectedGuests.size}명을 ${statusText}으로 변경했습니다!`, show: true });
+    setTimeout(() => setBulkActionResult(null), 3000);
+    clearSelection();
+  };
+
   const groomGuests = getGuestsBySide('groom');
   const brideGuests = getGuestsBySide('bride');
   const groomGroupGuests = getGroupGuestsBySide('groom');
@@ -395,6 +450,11 @@ const Guests = () => {
     if (filterAttendance !== 'all' && guest.attendance !== filterAttendance) return false;
     return true;
   });
+
+  // 필터 변경 시 선택 초기화
+  useEffect(() => {
+    setSelectedGuests(new Set());
+  }, [filterSide, filterAttendance]);
 
   return (
     <div className="space-y-4">
@@ -442,18 +502,25 @@ const Guests = () => {
           >
             <FaTable />
           </button>
-          <button
-            onClick={() => {
-              setShowGroupForm(true);
-              setShowAddForm(false);
-              setShowBulkForm(false);
-            }}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-purple-200 text-purple-500 hover:bg-purple-50 transition-colors"
-            data-testid="button-add-group"
-            title="그룹 하객 추가"
-          >
-            <FaUsers />
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => {
+                setShowGroupForm(true);
+                setShowAddForm(false);
+                setShowBulkForm(false);
+              }}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-purple-200 text-purple-500 hover:bg-purple-50 transition-colors"
+              data-testid="button-add-group"
+              title="단체 추가"
+            >
+              <FaUsers />
+            </button>
+            <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10 whitespace-nowrap">
+              <div className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1 shadow-lg">
+                이름 없이 인원수만 관리
+              </div>
+            </div>
+          </div>
           <button
             onClick={() => {
               setShowAddForm(true);
@@ -498,6 +565,56 @@ const Guests = () => {
         <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
           <FaCheck className="text-green-500" />
           <span className="font-medium">{csvUploadResult.count}명의 하객이 추가되었습니다!</span>
+        </div>
+      )}
+
+      {/* 일괄 작업 결과 알림 */}
+      {bulkActionResult?.show && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-700">
+          <FaCheck className="text-blue-500" />
+          <span className="font-medium">{bulkActionResult.message}</span>
+        </div>
+      )}
+
+      {/* 일괄 작업 버튼 */}
+      {selectedGuests.size > 0 && (
+        <div className="card bg-blue-50 border-2 border-blue-200">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <FaCheckSquare className="text-blue-500 text-lg" />
+              <span className="font-medium text-gray-800">{selectedGuests.size}명 선택됨</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={handleBulkSendInvitations}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                data-testid="button-bulk-send-invitations"
+              >
+                <FaEnvelope /> 일괄 청첩장 발송
+              </button>
+              <button
+                onClick={() => handleBulkAttendanceChange('attending')}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                data-testid="button-bulk-attending"
+              >
+                <FaCheck /> 일괄 참석 처리
+              </button>
+              <button
+                onClick={() => handleBulkAttendanceChange('declined')}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                data-testid="button-bulk-declined"
+              >
+                <FaTimes /> 일괄 불참 처리
+              </button>
+              <button
+                onClick={clearSelection}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                data-testid="button-clear-selection"
+              >
+                선택 취소
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1066,6 +1183,19 @@ const Guests = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
+                  <th className="py-3 px-4 font-medium w-12">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-gray-500 hover:text-blue-500 transition-colors"
+                      data-testid="button-select-all"
+                    >
+                      {selectedGuests.size === filteredGuests.length && filteredGuests.length > 0 ? (
+                        <FaCheckSquare className="text-blue-500" />
+                      ) : (
+                        <FaSquare />
+                      )}
+                    </button>
+                  </th>
                   <th className="py-3 px-4 font-medium">이름</th>
                   <th className="py-3 px-4 font-medium hidden md:table-cell">연락처</th>
                   <th className="py-3 px-4 font-medium">구분</th>
@@ -1076,11 +1206,24 @@ const Guests = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredGuests.map((guest) => (
-                  <tr 
-                    key={guest.id} 
-                    className="hover:bg-gray-50 transition-colors"
+                  <tr
+                    key={guest.id}
+                    className={`hover:bg-gray-50 transition-colors ${selectedGuests.has(guest.id) ? 'bg-blue-50' : ''}`}
                     data-testid={`guest-row-${guest.id}`}
                   >
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => toggleGuestSelection(guest.id)}
+                        className="text-gray-500 hover:text-blue-500 transition-colors"
+                        data-testid={`checkbox-${guest.id}`}
+                      >
+                        {selectedGuests.has(guest.id) ? (
+                          <FaCheckSquare className="text-blue-500" />
+                        ) : (
+                          <FaSquare />
+                        )}
+                      </button>
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-800">{guest.name}</span>
