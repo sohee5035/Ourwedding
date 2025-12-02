@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useVenueStore } from '../store/venueStore';
-import { FaSave, FaTimes, FaPlus, FaCamera, FaTrash, FaSpinner, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
+import { useAuthStore } from '../store/authStore';
+import { FaSave, FaTimes, FaPlus, FaCamera, FaTrash, FaSpinner, FaSearch, FaMapMarkerAlt, FaLock } from 'react-icons/fa';
 import type { VenuePhoto } from '../types';
 
 declare global {
@@ -24,10 +25,17 @@ const VenueForm = () => {
   const [, setLocation] = useLocation();
   const id = params?.id;
   const { addVenue, updateVenue, getVenueById, fetchVenues } = useVenueStore();
+  const { member } = useAuthStore();
   const isEdit = !!id;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const MAX_PHOTOS = 10;
+
+  const handleGoToLogin = () => {
+    setShowLoginPopup(false);
+    setLocation('/auth');
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -212,6 +220,11 @@ const VenueForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
 
     if (!formData.name.trim() || !formData.address.trim()) {
       alert('웨딩홀 이름과 주소는 필수입니다.');
@@ -449,6 +462,36 @@ const VenueForm = () => {
           </button>
         </div>
       </form>
+
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="login-popup">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blush-100 mx-auto mb-4">
+              <FaLock className="text-2xl text-blush-500" />
+            </div>
+            <h3 className="text-lg font-bold text-center text-gray-800 mb-2">로그인이 필요합니다</h3>
+            <p className="text-sm text-center text-gray-500 mb-6">
+              웨딩홀 정보를 저장하려면<br />로그인해 주세요.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLoginPopup(false)}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                data-testid="button-popup-cancel"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleGoToLogin}
+                className="flex-1 py-2.5 px-4 rounded-full bg-blush-400 text-white font-medium hover:bg-blush-500 transition-colors"
+                data-testid="button-popup-login"
+              >
+                로그인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

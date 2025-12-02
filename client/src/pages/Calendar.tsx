@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useChecklistStore } from '../store/checklistStore';
 import { useCalendarEventStore } from '../store/calendarEventStore';
 import { useEventCategoryStore } from '../store/eventCategoryStore';
+import { useAuthStore } from '../store/authStore';
+import { useLocation } from 'wouter';
 import { 
   format, 
   startOfMonth, 
@@ -32,6 +34,7 @@ import {
   FaTrash,
   FaHeart,
   FaCog,
+  FaLock,
 } from 'react-icons/fa';
 import type { CalendarEvent, EventCategory } from '@shared/schema';
 
@@ -81,6 +84,8 @@ const Calendar = () => {
   const { items, fetchItems } = useChecklistStore();
   const { events, fetchEvents, addEvent, updateEvent, deleteEvent } = useCalendarEventStore();
   const { categories, fetchCategories, addCategory, deleteCategory } = useEventCategoryStore();
+  const { member } = useAuthStore();
+  const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timetable'>('calendar');
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
@@ -97,6 +102,7 @@ const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDateEventsModalOpen, setIsDateEventsModalOpen] = useState(false);
   const [viewingSource, setViewingSource] = useState<'date-modal' | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
   
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -105,6 +111,11 @@ const Calendar = () => {
     category: '기타',
     memo: '',
   });
+
+  const handleGoToLogin = () => {
+    setShowLoginPopup(false);
+    setLocation('/auth');
+  };
 
   useEffect(() => {
     fetchItems();
@@ -195,6 +206,10 @@ const Calendar = () => {
   };
 
   const handleEventSubmit = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (!eventForm.title.trim() || !eventForm.date) return;
 
     if (editingEvent) {
@@ -218,11 +233,19 @@ const Calendar = () => {
   };
 
   const confirmDeleteEvent = (event: CalendarEvent) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     setEventToDelete(event);
     setIsDeleteConfirmOpen(true);
   };
 
   const handleDeleteEvent = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (eventToDelete) {
       await deleteEvent(eventToDelete.id);
       setIsDeleteConfirmOpen(false);
@@ -231,6 +254,10 @@ const Calendar = () => {
   };
 
   const handleAddCategory = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (!newCategoryName.trim()) return;
     await addCategory(newCategoryName.trim(), newCategoryColor);
     setNewCategoryName('');
@@ -238,6 +265,10 @@ const Calendar = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (id.startsWith('default-')) return;
     await deleteCategory(id);
   };
@@ -899,6 +930,36 @@ const Calendar = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="login-popup">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blush-100 mx-auto mb-4">
+              <FaLock className="text-2xl text-blush-500" />
+            </div>
+            <h3 className="text-lg font-bold text-center text-gray-800 mb-2">로그인이 필요합니다</h3>
+            <p className="text-sm text-center text-gray-500 mb-6">
+              일정을 수정하려면<br />로그인해 주세요.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLoginPopup(false)}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                data-testid="button-popup-cancel"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleGoToLogin}
+                className="flex-1 py-2.5 px-4 rounded-full bg-blush-400 text-white font-medium hover:bg-blush-500 transition-colors"
+                data-testid="button-popup-login"
+              >
+                로그인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

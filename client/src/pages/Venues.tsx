@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useVenueStore } from '../store/venueStore';
-import { Link } from 'wouter';
-import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock, FaList, FaMap, FaTimes, FaBuilding } from 'react-icons/fa';
+import { useAuthStore } from '../store/authStore';
+import { Link, useLocation } from 'wouter';
+import { FaPlus, FaMapMarkerAlt, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaSubway, FaCalendar, FaClock, FaList, FaMap, FaTimes, FaBuilding, FaLock } from 'react-icons/fa';
 import type { VenueQuote, WeddingVenue } from '../types';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -32,9 +33,12 @@ interface DateGroup {
 
 const Venues = () => {
   const { venues, venueQuotes, deleteVenue, deleteVenueQuote, fetchVenues, fetchVenueQuotes, getVenuesWithQuotes, getQuotesByVenueId, getVenueById } = useVenueStore();
+  const { member } = useAuthStore();
+  const [, setLocation] = useLocation();
   const [sortBy, setSortBy] = useState<'name' | 'quotes' | 'recent'>('recent');
   const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list' | 'map' | 'date'>('list');
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const [selectedVenue, setSelectedVenue] = useState<WeddingVenue | null>(null);
   const [selectedQuotes, setSelectedQuotes] = useState<VenueQuote[]>([]);
@@ -42,6 +46,11 @@ const Venues = () => {
 
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+
+  const handleGoToLogin = () => {
+    setShowLoginPopup(false);
+    setLocation('/auth');
+  };
 
   useEffect(() => {
     fetchVenues();
@@ -192,12 +201,20 @@ const Venues = () => {
   };
 
   const handleDeleteVenue = (id: string, name: string) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (window.confirm(`"${name}" 웨딩홀과 모든 견적을 삭제하시겠습니까?`)) {
       deleteVenue(id);
     }
   };
 
   const handleDeleteQuote = (quoteId: string, venueName: string) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (window.confirm(`"${venueName}" 견적을 삭제하시겠습니까?`)) {
       deleteVenueQuote(quoteId);
     }
@@ -796,6 +813,36 @@ const Venues = () => {
               )}
             </DrawerContent>
           </Drawer>
+        </div>
+      )}
+
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="login-popup">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blush-100 mx-auto mb-4">
+              <FaLock className="text-2xl text-blush-500" />
+            </div>
+            <h3 className="text-lg font-bold text-center text-gray-800 mb-2">로그인이 필요합니다</h3>
+            <p className="text-sm text-center text-gray-500 mb-6">
+              웨딩홀 정보를 수정하려면<br />로그인해 주세요.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLoginPopup(false)}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                data-testid="button-popup-cancel"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleGoToLogin}
+                className="flex-1 py-2.5 px-4 rounded-full bg-blush-400 text-white font-medium hover:bg-blush-500 transition-colors"
+                data-testid="button-popup-login"
+              >
+                로그인
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
