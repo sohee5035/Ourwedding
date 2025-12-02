@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { useGuestStore } from '../store/guestStore';
 import { useAuthStore } from '../store/authStore';
-import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck, FaUsers, FaCheckSquare, FaSquare, FaEnvelope } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaHeart, FaRegHeart, FaTable, FaTimes, FaDownload, FaUpload, FaCheck, FaUsers, FaCheckSquare, FaSquare, FaEnvelope, FaSignInAlt } from 'react-icons/fa';
 import type { Guest, GroupGuest } from '../types';
 
 interface BulkGuestRow {
@@ -16,6 +17,8 @@ const Guests = () => {
     groupGuests, addGroupGuest, updateGroupGuest, deleteGroupGuest, getGroupGuestsBySide, fetchGroupGuests, getTotalEstimatedCount
   } = useGuestStore();
   const { member } = useAuthStore();
+  const [, setLocation] = useLocation();
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
@@ -95,13 +98,50 @@ const Guests = () => {
   }, [attendanceDropdownId, deleteConfirmId, showAddForm]);
 
   const handleQuickAttendanceChange = (guestId: string, attendance: 'pending' | 'attending' | 'declined') => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     updateGuest(guestId, { attendance });
     setAttendanceDropdownId(null);
   };
 
   const handleDeleteConfirm = (id: string) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      setDeleteConfirmId(null);
+      return;
+    }
     deleteGuest(id);
     setDeleteConfirmId(null);
+  };
+
+  const handleGoToLogin = () => {
+    setShowLoginPopup(false);
+    setLocation('/auth');
+  };
+
+  const handleAddAction = (action: 'single' | 'bulk' | 'group') => {
+    if (!member) {
+      setShowAddForm(false);
+      setShowBulkForm(false);
+      setShowGroupForm(false);
+      setShowLoginPopup(true);
+      return;
+    }
+    if (action === 'single') {
+      setShowAddForm(true);
+      setShowBulkForm(false);
+      setShowGroupForm(false);
+    } else if (action === 'bulk') {
+      setShowBulkForm(true);
+      setShowAddForm(false);
+      setShowGroupForm(false);
+    } else if (action === 'group') {
+      setShowGroupForm(true);
+      setShowAddForm(false);
+      setShowBulkForm(false);
+    }
   };
 
   const downloadCsvTemplate = () => {
@@ -148,6 +188,13 @@ const Guests = () => {
   };
 
   const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -225,6 +272,10 @@ const Guests = () => {
   ]);
 
   const handleAdd = () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (!formData.name.trim()) return;
 
     addGuest(formData);
@@ -251,6 +302,10 @@ const Guests = () => {
   };
 
   const handleUpdate = () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (!editingId || !formData.name.trim()) return;
 
     updateGuest(editingId, formData);
@@ -289,6 +344,10 @@ const Guests = () => {
   };
 
   const handleBulkSave = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     const validRows = bulkRows.filter(row => row.name.trim());
     if (validRows.length === 0) return;
 
@@ -318,6 +377,10 @@ const Guests = () => {
   const [groupFormError, setGroupFormError] = useState<string | null>(null);
 
   const handleAddGroupGuest = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     setGroupFormError(null);
     if (!groupFormData.name.trim()) {
       setGroupFormError('그룹명을 입력해주세요.');
@@ -350,6 +413,10 @@ const Guests = () => {
   };
 
   const handleUpdateGroupGuest = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     setGroupFormError(null);
     if (!editingGroupId) return;
     if (!groupFormData.name.trim()) {
@@ -381,6 +448,11 @@ const Guests = () => {
   };
 
   const handleDeleteGroupConfirm = async (id: string) => {
+    if (!member) {
+      setShowLoginPopup(true);
+      setDeleteGroupConfirmId(null);
+      return;
+    }
     await deleteGroupGuest(id);
     setDeleteGroupConfirmId(null);
   };
@@ -412,6 +484,10 @@ const Guests = () => {
 
   // 일괄 작업 함수
   const handleBulkSendInvitations = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (selectedGuests.size === 0) return;
 
     const selectedGuestIds = Array.from(selectedGuests);
@@ -425,6 +501,10 @@ const Guests = () => {
   };
 
   const handleBulkAttendanceChange = async (attendance: 'attending' | 'declined') => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (selectedGuests.size === 0) return;
 
     const selectedGuestIds = Array.from(selectedGuests);
@@ -439,6 +519,10 @@ const Guests = () => {
   };
 
   const handleBulkDelete = async () => {
+    if (!member) {
+      setShowLoginPopup(true);
+      return;
+    }
     if (selectedGuests.size === 0) return;
 
     const selectedGuestIds = Array.from(selectedGuests);
@@ -508,11 +592,7 @@ const Guests = () => {
             data-testid="input-csv-file"
           />
           <button
-            onClick={() => {
-              setShowBulkForm(true);
-              setShowAddForm(false);
-              setShowGroupForm(false);
-            }}
+            onClick={() => handleAddAction('bulk')}
             className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
             data-testid="button-bulk-add"
             title="대량 추가"
@@ -521,11 +601,7 @@ const Guests = () => {
           </button>
           <div className="relative group">
             <button
-              onClick={() => {
-                setShowGroupForm(true);
-                setShowAddForm(false);
-                setShowBulkForm(false);
-              }}
+              onClick={() => handleAddAction('group')}
               className="w-9 h-9 flex items-center justify-center rounded-xl border border-purple-200 text-purple-500 hover:bg-purple-50 transition-colors"
               data-testid="button-add-group"
               title="단체 추가"
@@ -539,11 +615,7 @@ const Guests = () => {
             </div>
           </div>
           <button
-            onClick={() => {
-              setShowAddForm(true);
-              setShowBulkForm(false);
-              setShowGroupForm(false);
-            }}
+            onClick={() => handleAddAction('single')}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-blush-400 text-white hover:bg-blush-500 transition-colors"
             data-testid="button-add-guest"
             title="하객 추가"
@@ -1373,6 +1445,38 @@ const Guests = () => {
           </div>
         )}
       </div>
+
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-blush-100 rounded-full flex items-center justify-center">
+                <FaSignInAlt className="text-2xl text-blush-500" />
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">로그인이 필요해요</h3>
+            <p className="text-gray-600 mb-6 text-center text-sm">
+              하객을 추가하려면 먼저 로그인해 주세요.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLoginPopup(false)}
+                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                data-testid="button-cancel-login"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleGoToLogin}
+                className="flex-1 py-2 rounded-lg bg-blush-400 text-white hover:bg-blush-500 transition-colors"
+                data-testid="button-go-to-login"
+              >
+                로그인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
