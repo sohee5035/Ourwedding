@@ -6,13 +6,14 @@ import {
   FaUsers,
   FaHeart,
   FaCalendarAlt,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaSignInAlt
 } from 'react-icons/fa';
 import { useAuthStore } from '../../store/authStore';
 
 const Navigation = () => {
   const [location] = useLocation();
-  const { logout } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
 
   const navItems = [
     { path: '/', icon: FaHeart, label: '홈' },
@@ -63,15 +64,26 @@ const Navigation = () => {
                 );
               })}
               <div className="border-l border-gray-200 h-8 mx-2"></div>
-              
-              <button
-                onClick={handleLogout}
-                className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
-                title="로그아웃"
-                data-testid="button-logout"
-              >
-                <FaSignOutAlt />
-              </button>
+
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                  title="로그아웃"
+                  data-testid="button-logout"
+                >
+                  <FaSignOutAlt />
+                </button>
+              ) : (
+                <Link
+                  href="/auth"
+                  className="flex items-center gap-2 px-4 py-2 bg-blush-500 text-white rounded-full hover:bg-blush-600 transition-all shadow-md hover:shadow-lg"
+                  data-testid="button-login"
+                >
+                  <FaSignInAlt />
+                  <span className="font-medium">시작하기</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -86,14 +98,25 @@ const Navigation = () => {
             </div>
             <span className="text-lg font-serif font-bold text-gray-800">Our Wedding</span>
           </Link>
-          
-          <button
-            onClick={handleLogout}
-            className="text-gray-400 hover:text-red-500 p-2"
-            data-testid="button-logout-mobile"
-          >
-            <FaSignOutAlt className="text-sm" />
-          </button>
+
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-500 p-2"
+              data-testid="button-logout-mobile"
+            >
+              <FaSignOutAlt className="text-sm" />
+            </button>
+          ) : (
+            <Link
+              href="/auth"
+              className="flex items-center gap-1 px-3 py-1.5 bg-blush-500 text-white rounded-full text-sm font-medium"
+              data-testid="button-login-mobile"
+            >
+              <FaSignInAlt className="text-xs" />
+              <span>시작</span>
+            </Link>
+          )}
         </div>
       </div>
 

@@ -14,7 +14,7 @@ import Admin from './pages/Admin';
 import { useAuthStore } from './store/authStore';
 
 function App() {
-  const { isLoading, isAuthenticated, checkAuth } = useAuthStore();
+  const { isLoading, checkAuth } = useAuthStore();
   const [location] = useLocation();
 
   useEffect(() => {
@@ -36,14 +36,11 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Auth />;
-  }
-
   return (
     <Layout>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/auth" component={Auth} />
         <Route path="/venues" component={Venues} />
         <Route path="/venues/add" component={VenueForm} />
         <Route path="/venues/edit/:id" component={VenueForm} />
