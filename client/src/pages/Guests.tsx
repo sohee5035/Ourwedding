@@ -106,14 +106,20 @@ const Guests = () => {
     setAttendanceDropdownId(null);
   };
 
-  const handleDeleteConfirm = (id: string) => {
+  const handleDeleteConfirm = async (id: string) => {
     if (!member) {
       setShowLoginPopup(true);
       setDeleteConfirmId(null);
       return;
     }
-    deleteGuest(id);
-    setDeleteConfirmId(null);
+    try {
+      await deleteGuest(id);
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error('Failed to delete guest:', error);
+      alert('하객 삭제에 실패했습니다. 다시 시도해주세요.');
+      setDeleteConfirmId(null);
+    }
   };
 
   const handleGoToLogin = () => {
@@ -527,13 +533,27 @@ const Guests = () => {
 
     const selectedGuestIds = Array.from(selectedGuests);
     const count = selectedGuestIds.length;
+    let successCount = 0;
+    let errorCount = 0;
 
     for (const guestId of selectedGuestIds) {
-      await deleteGuest(guestId);
+      try {
+        await deleteGuest(guestId);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to delete guest ${guestId}:`, error);
+        errorCount++;
+      }
     }
 
-    setBulkActionResult({ message: `${count}명의 하객을 삭제했습니다.`, show: true });
-    setTimeout(() => setBulkActionResult(null), 3000);
+    if (successCount > 0) {
+      setBulkActionResult({ message: `${successCount}명의 하객을 삭제했습니다.${errorCount > 0 ? ` (${errorCount}명 실패)` : ''}`, show: true });
+      setTimeout(() => setBulkActionResult(null), 3000);
+    } else {
+      setBulkActionResult({ message: `삭제에 실패했습니다. 다시 시도해주세요.`, show: true });
+      setTimeout(() => setBulkActionResult(null), 3000);
+    }
+
     clearSelection();
     setShowBulkDeleteConfirm(false);
   };

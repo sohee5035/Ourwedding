@@ -485,12 +485,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const coupleId = requireAuth(req, res);
       if (!coupleId) return;
       const existing = await storage.getGuest(req.params.id);
-      if (!existing || existing.coupleId !== coupleId) {
+      if (!existing) {
+        console.error(`Delete failed - Guest not found: ${req.params.id}`);
+        return res.status(404).json({ error: "Guest not found" });
+      }
+      if (existing.coupleId !== coupleId) {
+        console.error(`Delete failed - Guest belongs to different couple. Guest ID: ${req.params.id}, Guest coupleId: ${existing.coupleId}, Session coupleId: ${coupleId}`);
         return res.status(404).json({ error: "Guest not found" });
       }
       await storage.deleteGuest(req.params.id);
       res.status(204).send();
     } catch (error) {
+      console.error('Error deleting guest:', error);
       res.status(500).json({ error: "Failed to delete guest" });
     }
   });
