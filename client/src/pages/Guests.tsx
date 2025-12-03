@@ -495,7 +495,7 @@ const Guests = () => {
       await updateGuest(guestId, { invitationSent: true });
     }
 
-    setBulkActionResult({ message: `${selectedGuests.size}명에게 청첩장을 발송했습니다!`, show: true });
+    setBulkActionResult({ message: `${selectedGuests.size}명을 청첩장 발송으로 체크했습니다!`, show: true });
     setTimeout(() => setBulkActionResult(null), 3000);
     clearSelection();
   };
