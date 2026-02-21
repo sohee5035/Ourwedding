@@ -13,8 +13,8 @@ import { useLocation } from 'wouter';
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
   const { guests, fetchGuests, getTotalEstimatedCount } = useGuestStore();
-  const { budgetItems, fetchItems: fetchBudgetItems } = useBudgetStore();
-  const { checklistItems, fetchItems: fetchChecklistItems } = useChecklistStore();
+  const { items: budgetItems, fetchItems: fetchBudgetItems } = useBudgetStore();
+  const { items: checklistItems, fetchItems: fetchChecklistItems } = useChecklistStore();
   const { events, fetchEvents } = useCalendarEventStore();
   const { member, couple, partner } = useAuthStore();
   const [, setLocation] = useLocation();
