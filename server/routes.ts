@@ -628,10 +628,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
-      
-      res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
-        couple: { id: couple.id, inviteCode: couple.inviteCode },
+
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error on register:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+        res.status(201).json({
+          member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
+          couple: { id: couple.id, inviteCode: couple.inviteCode },
+        });
       });
     } catch (error) {
       console.error(error);
@@ -704,10 +710,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       req.session.memberId = member.id;
       req.session.coupleId = couple.id;
-      
-      res.status(201).json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
-        couple: { id: couple.id },
+
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error on join:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+        res.status(201).json({
+          member: { id: member.id, name: member.name, coupleId: member.coupleId, role: member.role },
+          couple: { id: couple.id },
+        });
       });
     } catch (error) {
       console.error(error);
@@ -742,12 +754,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       req.session.memberId = member.id;
       req.session.coupleId = member.coupleId;
-      
+
       const couple = member.coupleId ? await storage.getCouple(member.coupleId) : null;
-      
-      res.json({
-        member: { id: member.id, name: member.name, coupleId: member.coupleId },
-        couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
+
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error on login:', err);
+          return res.status(500).json({ error: "세션 저장에 실패했습니다" });
+        }
+        res.json({
+          member: { id: member.id, name: member.name, coupleId: member.coupleId },
+          couple: couple ? { id: couple.id, inviteCode: couple.inviteCode } : null,
+        });
       });
     } catch (error) {
       console.error(error);
