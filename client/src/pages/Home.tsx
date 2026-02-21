@@ -2,7 +2,7 @@ import { useWeddingInfoStore } from '../store/weddingInfoStore';
 import { useGuestStore } from '../store/guestStore';
 import { useBudgetStore } from '../store/budgetStore';
 import { useChecklistStore } from '../store/checklistStore';
-import { useCalendarStore } from '../store/calendarStore';
+import { useCalendarEventStore } from '../store/calendarEventStore';
 import { useAuthStore } from '../store/authStore';
 import { FaHeart, FaUsers, FaMoneyBillWave, FaCheckSquare, FaCalendarAlt, FaPlus, FaCopy, FaCheck, FaEdit } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
@@ -15,7 +15,7 @@ const Home = () => {
   const { guests, fetchGuests, getTotalEstimatedCount } = useGuestStore();
   const { budgetItems, fetchItems: fetchBudgetItems } = useBudgetStore();
   const { checklistItems, fetchItems: fetchChecklistItems } = useChecklistStore();
-  const { events, fetchEvents } = useCalendarStore();
+  const { events, fetchEvents } = useCalendarEventStore();
   const { member, couple, partner } = useAuthStore();
   const [, setLocation] = useLocation();
 
