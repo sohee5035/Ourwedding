@@ -1,25 +1,39 @@
 import { useWeddingInfoStore } from '../store/weddingInfoStore';
-import { useNotesStore } from '../store/notesStore';
+import { useGuestStore } from '../store/guestStore';
+import { useBudgetStore } from '../store/budgetStore';
+import { useChecklistStore } from '../store/checklistStore';
+import { useCalendarStore } from '../store/calendarStore';
 import { useAuthStore } from '../store/authStore';
-import { FaHeart, FaEdit, FaPaperPlane, FaTrash, FaCopy, FaCheck, FaPen } from 'react-icons/fa';
-import { useState, useEffect, useRef } from 'react';
-import { format } from 'date-fns';
+import { FaHeart, FaUsers, FaMoneyBillWave, FaCheckSquare, FaCalendarAlt, FaPlus, FaCopy, FaCheck, FaEdit } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useLocation } from 'wouter';
 
 const Home = () => {
   const weddingInfo = useWeddingInfoStore();
-  const { notes, fetchNotes, addNote, updateNote, deleteNote, isLoading } = useNotesStore();
+  const { guests, fetchGuests, getTotalEstimatedCount } = useGuestStore();
+  const { budgetItems, fetchItems: fetchBudgetItems } = useBudgetStore();
+  const { checklistItems, fetchItems: fetchChecklistItems } = useChecklistStore();
+  const { events, fetchEvents } = useCalendarStore();
   const { member, couple, partner } = useAuthStore();
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    weddingDate: weddingInfo.weddingDate || '',
-    totalBudget: weddingInfo.totalBudget || 0,
-  });
-  
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editingNoteContent, setEditingNoteContent] = useState('');
-  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
+
+  const [copied, setCopied] = useState(false);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [newDate, setNewDate] = useState(weddingInfo.weddingDate || '');
+
+  useEffect(() => {
+    weddingInfo.fetchInfo();
+    fetchGuests();
+    fetchBudgetItems();
+    fetchChecklistItems();
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    setNewDate(weddingInfo.weddingDate || '');
+  }, [weddingInfo.weddingDate]);
 
   const getGroomName = () => {
     if (member?.role === 'groom') return member.name;
@@ -35,46 +49,26 @@ const Home = () => {
 
   const groomName = getGroomName();
   const brideName = getBrideName();
-  
-  const [noteContent, setNoteContent] = useState('');
-  const [copied, setCopied] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    weddingInfo.fetchInfo();
-    fetchNotes();
-  }, []);
-
-  useEffect(() => {
-    setFormData({
-      weddingDate: weddingInfo.weddingDate || '',
-      totalBudget: weddingInfo.totalBudget || 0,
-    });
-  }, [weddingInfo.weddingDate, weddingInfo.totalBudget]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [notes]);
 
   const daysUntil = weddingInfo.getDaysUntilWedding();
 
-  const handleSave = async () => {
-    await weddingInfo.updateInfo(formData);
-    setIsEditing(false);
-  };
+  const totalGuests = getTotalEstimatedCount();
+  const attendingGuests = guests.filter(g => g.attendance === 'attending').length;
 
-  const handleSubmitNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteContent.trim() || !member) return;
-    
-    await addNote({
-      author: member.name,
-      content: noteContent.trim(),
-      coupleId: couple?.id,
-      memberId: member.id,
-    });
-    setNoteContent('');
-  };
+  const totalBudget = budgetItems.reduce((sum, item) => sum + item.budgetAmount, 0);
+  const spentBudget = budgetItems.reduce((sum, item) => sum + item.actualAmount, 0);
+  const budgetPercent = totalBudget > 0 ? Math.round((spentBudget / totalBudget) * 100) : 0;
+
+  const completedTasks = checklistItems.filter(item => item.completed).length;
+  const totalTasks = checklistItems.length;
+
+  const upcomingEvents = events
+    .filter(event => {
+      const eventDate = parseISO(event.date);
+      return differenceInDays(eventDate, new Date()) >= 0;
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 3);
 
   const handleCopyCode = async () => {
     if (couple?.inviteCode) {
@@ -84,268 +78,257 @@ const Home = () => {
     }
   };
 
-  const handleStartEdit = (note: { id: string; content: string }) => {
-    setEditingNoteId(note.id);
-    setEditingNoteContent(note.content);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingNoteId(null);
-    setEditingNoteContent('');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingNoteId || !editingNoteContent.trim()) return;
-    await updateNote(editingNoteId, editingNoteContent.trim());
-    setEditingNoteId(null);
-    setEditingNoteContent('');
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletingNoteId) return;
-    await deleteNote(deletingNoteId);
-    setDeletingNoteId(null);
-  };
-
-  const isMyNote = (author: string) => {
-    return author === member?.name;
+  const handleSaveDate = async () => {
+    if (newDate) {
+      await weddingInfo.updateInfo({ weddingDate: newDate });
+    }
+    setIsEditingDate(false);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)]">
-      {!isEditing ? (
-        <div 
-          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blush-100 to-lavender-100 rounded-xl mb-4 cursor-pointer"
-          onClick={() => setIsEditing(true)}
-          data-testid="header-card"
-        >
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-base font-bold text-gray-800">
-                {groomName && brideName
-                  ? `${groomName} ❤️ ${brideName}`
-                  : groomName || brideName
-                    ? `${groomName || brideName}의 결혼 준비`
-                    : '우리의 결혼을 준비해요'}
-              </h1>
-              {formData.weddingDate ? (
-                <p className="text-xs text-gray-600">
-                  {format(new Date(formData.weddingDate), 'yyyy년 M월 d일', { locale: ko })}
-                </p>
-              ) : (
-                <p className="text-xs text-gray-400">여기를 눌러서 결혼식 날짜를 등록해주세요!</p>
-              )}
-            </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* 헤더: 이름 & D-day */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-warm-100 to-accent-50 rounded-3xl p-8 border border-rose-100 shadow-lg shadow-rose-100/50 animate-scale-in">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-800 mb-2">
+              {groomName && brideName
+                ? `${groomName} ❤ ${brideName}`
+                : groomName || brideName
+                  ? `${groomName || brideName}의 결혼 준비`
+                  : '우리의 결혼을 준비해요'}
+            </h1>
+            {isEditingDate ? (
+              <div className="flex gap-2 items-center mt-4">
+                <input
+                  type="date"
+                  className="input-field max-w-xs"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  data-testid="input-wedding-date"
+                />
+                <button onClick={handleSaveDate} className="btn-primary px-4 py-2 text-sm">
+                  저장
+                </button>
+                <button onClick={() => setIsEditingDate(false)} className="btn-secondary px-4 py-2 text-sm">
+                  취소
+                </button>
+              </div>
+            ) : weddingInfo.weddingDate ? (
+              <button
+                onClick={() => setIsEditingDate(true)}
+                className="flex items-center gap-2 text-neutral-600 hover:text-rose-600 transition-colors mt-2"
+              >
+                <span className="text-lg">
+                  {format(new Date(weddingInfo.weddingDate), 'yyyy년 M월 d일 (eee)', { locale: ko })}
+                </span>
+                <FaEdit className="text-sm" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditingDate(true)}
+                className="text-neutral-500 hover:text-rose-600 transition-colors text-sm mt-2 flex items-center gap-2"
+              >
+                <FaPlus className="text-xs" />
+                결혼식 날짜를 등록해주세요
+              </button>
+            )}
           </div>
+
           {daysUntil !== null && (
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blush-500">D-{daysUntil}</p>
+            <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-6 shadow-lg">
+              <p className="text-sm text-neutral-600 mb-2 font-medium">D-Day</p>
+              <p className="text-6xl font-bold bg-gradient-to-r from-rose-500 to-rose-600 bg-clip-text text-transparent animate-pulse-subtle">
+                {daysUntil}
+              </p>
+              <p className="text-xs text-neutral-500 mt-2">일 남았어요</p>
             </div>
           )}
         </div>
-      ) : (
-        <div className="card mb-4 bg-gradient-to-r from-blush-100 to-lavender-100 border-none">
-          <div className="space-y-4 max-w-md mx-auto">
-            <div className="text-center mb-2">
-              <h2 className="text-lg font-bold text-gray-800">
-                {groomName && brideName
-                  ? `${groomName} ❤️ ${brideName}`
-                  : groomName || brideName
-                    ? `${groomName || brideName}의 결혼 준비`
-                    : '우리의 결혼을 준비해요'}
-              </h2>
-              {!partner && (
-                <p className="text-xs text-gray-500 mt-1">상대방이 합류하면 이름이 표시됩니다</p>
-              )}
-            </div>
+      </div>
 
-            <div>
-              <label className="label text-sm">결혼식 날짜</label>
-              <input
-                type="date"
-                className="input-field"
-                value={formData.weddingDate}
-                onChange={(e) => setFormData({ ...formData, weddingDate: e.target.value })}
-                data-testid="input-wedding-date"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="btn-primary flex-1" data-testid="button-save-info">
-                저장
-              </button>
-              <button onClick={() => setIsEditing(false)} className="btn-secondary flex-1" data-testid="button-cancel">
-                취소
-              </button>
+      {/* 초대 코드 */}
+      {!partner && couple && (
+        <div className="bg-accent-50 border-2 border-accent-200 rounded-2xl p-6 animate-slide-down">
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-neutral-700 mb-3">💌 상대방을 초대해주세요!</p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-white rounded-xl px-4 py-3 text-center font-mono text-2xl tracking-widest text-gray-800 font-bold border-2 border-accent-300">
+                  {couple.inviteCode}
+                </div>
+                <button
+                  onClick={handleCopyCode}
+                  className={`p-3 rounded-xl transition-all ${
+                    copied ? 'bg-green-500 text-white scale-110' : 'bg-rose-500 text-white hover:bg-rose-600 hover:scale-105'
+                  }`}
+                  data-testid="button-copy-code"
+                >
+                  {copied ? <FaCheck /> : <FaCopy />}
+                </button>
+              </div>
+              <p className="text-xs text-neutral-600 mt-2">이 코드를 상대방에게 공유해주세요</p>
             </div>
           </div>
         </div>
       )}
 
-      {!partner && couple && (
-        <div className="bg-gold-50 border border-gold-200 rounded-xl p-4 mb-4">
-          <p className="text-sm text-gray-700 mb-2">상대방을 초대해주세요!</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-white rounded-lg px-4 py-2 text-center font-mono text-xl tracking-widest text-gray-800">
-              {couple.inviteCode}
+      {/* 통계 카드 4개 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button
+          onClick={() => setLocation('/guests')}
+          className="card text-left hover:scale-105 transition-transform animate-slide-up"
+          style={{ animationDelay: '0.1s' }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+              <FaUsers className="text-blue-500 text-xl" />
             </div>
+            <p className="text-sm font-medium text-neutral-600">하객</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">{totalGuests}</p>
+          <p className="text-xs text-neutral-500 mt-1">참석 {attendingGuests}명</p>
+        </button>
+
+        <button
+          onClick={() => setLocation('/budget')}
+          className="card text-left hover:scale-105 transition-transform animate-slide-up"
+          style={{ animationDelay: '0.2s' }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+              <FaMoneyBillWave className="text-green-500 text-xl" />
+            </div>
+            <p className="text-sm font-medium text-neutral-600">예산</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">{budgetPercent}%</p>
+          <p className="text-xs text-neutral-500 mt-1">집행률</p>
+        </button>
+
+        <button
+          onClick={() => setLocation('/checklist')}
+          className="card text-left hover:scale-105 transition-transform animate-slide-up"
+          style={{ animationDelay: '0.3s' }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center">
+              <FaCheckSquare className="text-rose-500 text-xl" />
+            </div>
+            <p className="text-sm font-medium text-neutral-600">체크리스트</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">{completedTasks}/{totalTasks}</p>
+          <p className="text-xs text-neutral-500 mt-1">완료</p>
+        </button>
+
+        <button
+          onClick={() => setLocation('/calendar')}
+          className="card text-left hover:scale-105 transition-transform animate-slide-up"
+          style={{ animationDelay: '0.4s' }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+              <FaCalendarAlt className="text-purple-500 text-xl" />
+            </div>
+            <p className="text-sm font-medium text-neutral-600">일정</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">{events.length}</p>
+          <p className="text-xs text-neutral-500 mt-1">등록됨</p>
+        </button>
+      </div>
+
+      {/* 다가오는 일정 */}
+      <div className="card animate-slide-up" style={{ animationDelay: '0.5s' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <FaCalendarAlt className="text-rose-500" />
+            다가오는 일정
+          </h2>
+          <button
+            onClick={() => setLocation('/calendar')}
+            className="text-sm text-rose-600 hover:text-rose-700 font-medium"
+          >
+            전체보기 →
+          </button>
+        </div>
+
+        {upcomingEvents.length === 0 ? (
+          <div className="text-center py-12">
+            <FaCalendarAlt className="text-4xl text-neutral-300 mx-auto mb-3" />
+            <p className="text-neutral-500 mb-2">아직 등록된 일정이 없어요</p>
             <button
-              onClick={handleCopyCode}
-              className={`p-3 rounded-lg transition-colors ${
-                copied ? 'bg-green-500 text-white' : 'bg-blush-500 text-white hover:bg-blush-600'
-              }`}
-              data-testid="button-copy-code"
+              onClick={() => setLocation('/calendar')}
+              className="btn-primary mt-4 inline-flex items-center gap-2 text-sm px-4 py-2"
             >
-              {copied ? <FaCheck /> : <FaCopy />}
+              <FaPlus /> 일정 추가하기
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">이 코드를 상대방에게 공유해주세요</p>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-gray-800">공유 메모</h2>
-        <span className="text-xs text-gray-500">{member?.name}으로 작성</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <p className="text-gray-500">메모를 불러오는 중...</p>
-          </div>
-        ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center">
-            <FaHeart className="text-4xl text-blush-300 mb-3" />
-            <p className="text-gray-500 mb-1">아직 메모가 없어요</p>
-            <p className="text-sm text-gray-400">결혼 준비하면서 이야기를 나눠보세요!</p>
-          </div>
         ) : (
-          notes.map((note) => (
-            <div
-              key={note.id}
-              className={`flex ${isMyNote(note.author) ? 'justify-end' : 'justify-start'}`}
-              data-testid={`note-item-${note.id}`}
-            >
+          <div className="space-y-3">
+            {upcomingEvents.map((event, index) => (
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  isMyNote(note.author)
-                    ? 'bg-gray-100 rounded-br-sm'
-                    : 'bg-gray-50 rounded-bl-sm border border-gray-100'
-                }`}
+                key={event.id}
+                className="flex items-center gap-4 p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-all cursor-pointer animate-slide-up"
+                style={{ animationDelay: `${0.6 + index * 0.1}s` }}
+                onClick={() => setLocation('/calendar')}
               >
-                {editingNoteId === note.id ? (
-                  <div className="space-y-2">
-                    <textarea
-                      className="w-full p-2 rounded-lg border border-gray-300 text-sm text-gray-800 resize-none"
-                      value={editingNoteContent}
-                      onChange={(e) => setEditingNoteContent(e.target.value)}
-                      rows={3}
-                      autoFocus
-                      data-testid={`textarea-edit-note-${note.id}`}
-                    />
-                    <div className="flex gap-2 justify-end">
-                      <button
-                        onClick={handleCancelEdit}
-                        className="text-xs px-3 py-1 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
-                        data-testid={`button-cancel-edit-${note.id}`}
-                      >
-                        취소
-                      </button>
-                      <button
-                        onClick={handleSaveEdit}
-                        className="text-xs px-3 py-1 rounded bg-blush-500 text-white hover:bg-blush-600"
-                        data-testid={`button-save-edit-${note.id}`}
-                      >
-                        저장
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
-                      {note.content}
-                    </p>
-                    <div className="flex items-center justify-between mt-2 gap-2">
-                      <p className="text-xs text-gray-500">
-                        {note.createdAt && format(new Date(note.createdAt), 'M/d a h:mm', { locale: ko })}
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleStartEdit(note)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                          data-testid={`button-edit-note-${note.id}`}
-                        >
-                          <FaPen className="text-xs" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingNoteId(note.id)}
-                          className="text-gray-400 hover:text-blush-500 transition-colors"
-                          data-testid={`button-delete-note-${note.id}`}
-                        >
-                          <FaTrash className="text-xs" />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="text-center min-w-[60px]">
+                  <p className="text-2xl font-bold text-rose-500">
+                    {format(parseISO(event.date), 'd')}
+                  </p>
+                  <p className="text-xs text-neutral-600">
+                    {format(parseISO(event.date), 'MMM', { locale: ko })}
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">{event.title}</p>
+                  {event.time && (
+                    <p className="text-sm text-neutral-500">{event.time}</p>
+                  )}
+                  {event.memo && (
+                    <p className="text-xs text-neutral-400 mt-1">{event.memo}</p>
+                  )}
+                </div>
+                <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: event.category || '#C4788A' }}></div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmitNote} className="flex gap-2 mt-auto items-end">
-        <textarea
-          className="input-field flex-1 resize-none min-h-[44px] max-h-[120px]"
-          value={noteContent}
-          onChange={(e) => setNoteContent(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              if (noteContent.trim()) {
-                handleSubmitNote(e);
-              }
-            }
-          }}
-          placeholder="메모를 입력하세요... (Shift+Enter로 줄바꿈)"
-          rows={1}
-          data-testid="input-note-content"
-        />
-        <button
-          type="submit"
-          className="btn-primary px-4 h-[44px]"
-          disabled={!noteContent.trim()}
-          data-testid="button-send-note"
-        >
-          <FaPaperPlane />
-        </button>
-      </form>
-
-      {deletingNoteId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">메모 삭제</h3>
-            <p className="text-gray-600 mb-6">이 메모를 삭제하시겠어요?</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingNoteId(null)}
-                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                data-testid="button-cancel-delete"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="flex-1 py-2 rounded-lg bg-blush-400 text-white hover:bg-blush-500 transition-colors"
-                data-testid="button-confirm-delete"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
+      {/* 빠른 추가 버튼 */}
+      <div className="card animate-slide-up" style={{ animationDelay: '0.7s' }}>
+        <h3 className="text-lg font-bold text-gray-800 mb-4">빠른 추가</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <button
+            onClick={() => setLocation('/guests')}
+            className="p-4 rounded-xl border-2 border-neutral-200 hover:border-rose-300 hover:bg-rose-50 transition-all text-center group"
+          >
+            <FaUsers className="text-2xl text-neutral-400 group-hover:text-rose-500 mx-auto mb-2 transition-colors" />
+            <p className="text-sm font-medium text-neutral-700 group-hover:text-rose-600 transition-colors">하객 추가</p>
+          </button>
+          <button
+            onClick={() => setLocation('/calendar')}
+            className="p-4 rounded-xl border-2 border-neutral-200 hover:border-rose-300 hover:bg-rose-50 transition-all text-center group"
+          >
+            <FaCalendarAlt className="text-2xl text-neutral-400 group-hover:text-rose-500 mx-auto mb-2 transition-colors" />
+            <p className="text-sm font-medium text-neutral-700 group-hover:text-rose-600 transition-colors">일정 추가</p>
+          </button>
+          <button
+            onClick={() => setLocation('/checklist')}
+            className="p-4 rounded-xl border-2 border-neutral-200 hover:border-rose-300 hover:bg-rose-50 transition-all text-center group"
+          >
+            <FaCheckSquare className="text-2xl text-neutral-400 group-hover:text-rose-500 mx-auto mb-2 transition-colors" />
+            <p className="text-sm font-medium text-neutral-700 group-hover:text-rose-600 transition-colors">할 일 추가</p>
+          </button>
+          <button
+            onClick={() => setLocation('/budget')}
+            className="p-4 rounded-xl border-2 border-neutral-200 hover:border-rose-300 hover:bg-rose-50 transition-all text-center group"
+          >
+            <FaMoneyBillWave className="text-2xl text-neutral-400 group-hover:text-rose-500 mx-auto mb-2 transition-colors" />
+            <p className="text-sm font-medium text-neutral-700 group-hover:text-rose-600 transition-colors">예산 추가</p>
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
